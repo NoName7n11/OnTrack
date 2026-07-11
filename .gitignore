@@ -1,6 +1,9 @@
 # OnTrack private per-user state — never commit (see PLAN.md)
 .ontrack/personal.json
 
+# Local-only contributor change log
+PROGRESS.md
+
 # Node
 node_modules/
 npm-debug.log*
