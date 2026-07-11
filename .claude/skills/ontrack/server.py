@@ -16,10 +16,12 @@ import sys
 from functools import partial
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from threading import Lock
 
 STATUSES = {"known", "somewhat", "to_learn", "ignored"}
 PORT_START = 3874
 PORT_TRIES = 20
+PERSONAL_LOCK = Lock()
 
 
 def load_json(path, default):
@@ -36,6 +38,11 @@ def _atomic_write(path, text):
     os.replace(tmp, path)  # atomic on same filesystem
 
 
+def inventory_ids(root):
+    inv = load_json(Path(root) / ".ontrack" / "inventory.json", {"items": []})
+    return {item.get("id") for item in inv.get("items", []) if item.get("id")}
+
+
 def set_status(root, item_id, status):
     """Record status for an inventory item id. Raises ValueError on bad status.
 
@@ -45,11 +52,14 @@ def set_status(root, item_id, status):
         raise ValueError(f"invalid status: {status!r}")
     if not item_id or not isinstance(item_id, str):
         raise ValueError("item id required")
+    if item_id not in inventory_ids(root):
+        raise ValueError(f"unknown item id: {item_id!r}")
     p = Path(root) / ".ontrack" / "personal.json"
     p.parent.mkdir(exist_ok=True)
-    data = load_json(p, {"status": {}})
-    data.setdefault("status", {})[item_id] = status
-    _atomic_write(p, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+    with PERSONAL_LOCK:
+        data = load_json(p, {"status": {}})
+        data.setdefault("status", {})[item_id] = status
+        _atomic_write(p, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
     return data
 
 
@@ -89,9 +99,11 @@ class Handler(BaseHTTPRequestHandler):
         if self.path != "/status":
             self._send(404, "not found", "text/plain")
             return
-        length = int(self.headers.get("Content-Length", 0))
         try:
+            length = int(self.headers.get("Content-Length", 0))
             payload = json.loads(self.rfile.read(length) or b"{}")
+            if not isinstance(payload, dict):
+                raise ValueError("body must be a JSON object")
             data = set_status(self.root, payload.get("id"), payload.get("status"))
         except (json.JSONDecodeError, ValueError) as e:
             self._send(400, json.dumps({"ok": False, "error": str(e)}),

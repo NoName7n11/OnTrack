@@ -10,13 +10,22 @@ import server
 def test_set_status():
     with tempfile.TemporaryDirectory() as d:
         root = Path(d)
+        (root / ".ontrack").mkdir()
+        (root / ".ontrack" / "inventory.json").write_text(json.dumps({
+            "items": [
+                {"id": "library:react"},
+                {"id": "language:python"},
+            ]
+        }), encoding="utf-8")
 
         # valid status writes personal.json (and only that)
         server.set_status(root, "library:react", "known")
         p = root / ".ontrack" / "personal.json"
         data = json.loads(p.read_text(encoding="utf-8"))
         assert data["status"]["library:react"] == "known", data
-        assert list((root / ".ontrack").iterdir()) == [p], "only personal.json written"
+        assert {x.name for x in (root / ".ontrack").iterdir()} == {
+            "inventory.json", "personal.json"
+        }, "only personal.json added by server"
 
         # second write merges, doesn't clobber
         server.set_status(root, "language:python", "to_learn")
@@ -46,8 +55,18 @@ def test_set_status():
         except ValueError:
             pass
 
+        # unknown inventory id rejected
+        try:
+            server.set_status(root, "library:missing", "known")
+            assert False, "should reject unknown item id"
+        except ValueError:
+            pass
+
         # inventory.json is never created/touched by the server
-        assert not (root / ".ontrack" / "inventory.json").exists()
+        inventory_before = (root / ".ontrack" / "inventory.json").read_text(encoding="utf-8")
+        server.set_status(root, "language:python", "ignored")
+        assert (root / ".ontrack" / "inventory.json").read_text(
+            encoding="utf-8") == inventory_before
 
     print("ok: set_status validates, merges, writes only personal.json atomically")
 

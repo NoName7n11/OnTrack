@@ -195,8 +195,8 @@ know it") is a *later* hint, never a claim. See deferred "coach" below.
 ## Critical files (to create)
 - `.claude/hooks/track.*` — SessionEnd hook, appends observations to `evidence.jsonl`
 - `.claude/skills/ontrack/SKILL.md` — build inventory + inference + start server
-- `.ontrack/server.*` — stdlib local server, serves dashboard + `POST /status`
-- `.ontrack/dashboard.html` — static data-driven template (committed — it's source)
+- `.claude/skills/ontrack/server.*` — stdlib local server, serves dashboard + `POST /status`
+- `.claude/skills/ontrack/dashboard.html` — static data-driven template (committed — it's source)
 - `.ontrack/evidence.jsonl` — append-only facts (committed)
 - `.ontrack/inventory.json` — derived view (committed)
 - `.ontrack/personal.json` — private per-item status (gitignored)

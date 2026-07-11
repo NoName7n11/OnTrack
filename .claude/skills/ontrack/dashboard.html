@@ -78,13 +78,24 @@ async function load() {
 }
 
 async function setStatus(id, value) {
+  const previous = status[id];
   status[id] = value; // optimistic
   render();
-  const res = await fetch("/status", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, status: value }),
-  });
-  if (!res.ok) { alert("Failed to save status"); }
+  try {
+    const res = await fetch("/status", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status: value }),
+    });
+    if (!res.ok) {
+      if (previous === undefined) delete status[id]; else status[id] = previous;
+      render();
+      alert("Failed to save status");
+    }
+  } catch (err) {
+    if (previous === undefined) delete status[id]; else status[id] = previous;
+    render();
+    alert("Failed to save status");
+  }
 }
 
 function ytLink(q) {
@@ -127,7 +138,6 @@ function render() {
   const app = document.getElementById("app");
   app.innerHTML = "";
   // group items by section; keep children next to their parent within a section
-  const byId = Object.fromEntries(inventory.items.map(i => [i.id, i]));
   const buckets = { review: [], learning: [], learned: [], ignored: [] };
   for (const item of inventory.items) buckets[sectionOf(status[item.id])].push(item);
 
