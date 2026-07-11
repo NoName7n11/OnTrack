@@ -18,7 +18,10 @@ def test_build_inventory():
         (root / ".ontrack").mkdir()
         (root / ".ontrack" / "evidence.jsonl").write_text(
             '{"type":"dependency","name":"react","source":"package.json","detected_at":"x"}\n'
-            '{"type":"dependency","name":"leftpad","source":"package.json","detected_at":"x"}\n')
+            '{"type":"dependency","name":"leftpad","source":"package.json","detected_at":"x"}\n'
+            '{"type":"file_extension","name":"tsx","source":"App.tsx","detected_at":"x"}\n'
+            '{"type":"file_extension","name":"py","source":"main.py","detected_at":"x"}\n'
+            '{"type":"file_extension","name":"md","source":"notes.md","detected_at":"x"}\n')
 
         inv = build.build_inventory(root)
         by_id = {i["id"]: i for i in inv["items"]}
@@ -44,6 +47,22 @@ def test_build_inventory():
         assert build.write_inventory(root, inv) is False, "no rewrite when unchanged"
         loaded = json.loads((root / ".ontrack" / "inventory.json").read_text(encoding="utf-8"))
         assert loaded == inv, "round-trips through JSON"
+
+        # Evidence is the source of truth: current repo facts with no evidence
+        # should not appear in inventory.
+        (root / ".ontrack" / "evidence.jsonl").write_text("")
+        assert build.build_inventory(root) == {"items": []}
+
+        # C-family IDs must not collide.
+        (root / ".ontrack" / "evidence.jsonl").write_text(
+            '{"type":"file_extension","name":"c","source":"a.c","detected_at":"x"}\n'
+            '{"type":"file_extension","name":"cpp","source":"a.cpp","detected_at":"x"}\n'
+            '{"type":"file_extension","name":"cs","source":"a.cs","detected_at":"x"}\n')
+        (root / "a.c").write_text("int main() { return 0; }")
+        (root / "a.cpp").write_text("int main() { return 0; }")
+        (root / "a.cs").write_text("class A {}")
+        ids = {i["id"] for i in build.build_inventory(root)["items"]}
+        assert {"language:c", "language:cpp", "language:csharp"} <= ids, ids
 
     print("ok: confirmed inventory built, stale dropped, noise skipped, no churn")
 

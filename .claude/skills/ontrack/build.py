@@ -20,22 +20,22 @@ import track  # noqa: E402
 # File extensions worth surfacing as "languages/tech to learn", with a one-liner.
 # Unmapped extensions (json, md, txt, lock, ...) are noise - skipped on purpose.
 EXT_LANG = {
-    "py":   ("Python", "Python programming language", "python tutorial"),
-    "js":   ("JavaScript", "The language of the web", "javascript tutorial"),
-    "jsx":  ("JavaScript (React)", "JSX - React's HTML-in-JS syntax", "react jsx tutorial"),
-    "ts":   ("TypeScript", "Typed superset of JavaScript", "typescript tutorial"),
-    "tsx":  ("TypeScript (React)", "TSX - typed React components", "react typescript tutorial"),
-    "rs":   ("Rust", "Systems language with memory safety", "rust tutorial"),
-    "go":   ("Go", "Google's concurrent systems language", "golang tutorial"),
-    "java": ("Java", "JVM object-oriented language", "java tutorial"),
-    "rb":   ("Ruby", "Dynamic scripting language", "ruby tutorial"),
-    "php":  ("PHP", "Server-side web language", "php tutorial"),
-    "cs":   ("C#", ".NET object-oriented language", "c# tutorial"),
-    "cpp":  ("C++", "Systems language with OOP", "c++ tutorial"),
-    "c":    ("C", "Low-level systems language", "c programming tutorial"),
-    "html": ("HTML", "Markup for web pages", "html tutorial"),
-    "css":  ("CSS", "Styling for web pages", "css tutorial"),
-    "scss": ("Sass", "CSS with variables and nesting", "sass scss tutorial"),
+    "py":   ("python", "Python", "Python programming language", "python tutorial"),
+    "js":   ("javascript", "JavaScript", "The language of the web", "javascript tutorial"),
+    "jsx":  ("javascript-react", "JavaScript (React)", "JSX - React's HTML-in-JS syntax", "react jsx tutorial"),
+    "ts":   ("typescript", "TypeScript", "Typed superset of JavaScript", "typescript tutorial"),
+    "tsx":  ("typescript-react", "TypeScript (React)", "TSX - typed React components", "react typescript tutorial"),
+    "rs":   ("rust", "Rust", "Systems language with memory safety", "rust tutorial"),
+    "go":   ("go", "Go", "Google's concurrent systems language", "golang tutorial"),
+    "java": ("java", "Java", "JVM object-oriented language", "java tutorial"),
+    "rb":   ("ruby", "Ruby", "Dynamic scripting language", "ruby tutorial"),
+    "php":  ("php", "PHP", "Server-side web language", "php tutorial"),
+    "cs":   ("csharp", "C#", ".NET object-oriented language", "c# tutorial"),
+    "cpp":  ("cpp", "C++", "Systems language with OOP", "c++ tutorial"),
+    "c":    ("c", "C", "Low-level systems language", "c programming tutorial"),
+    "html": ("html", "HTML", "Markup for web pages", "html tutorial"),
+    "css":  ("css", "CSS", "Styling for web pages", "css tutorial"),
+    "scss": ("sass", "Sass", "CSS with variables and nesting", "sass scss tutorial"),
 }
 
 
@@ -46,7 +46,9 @@ def _slug(s):
 def build_inventory(root):
     """Return the inventory dict (confirmed items) for the repo at `root`."""
     root = Path(root)
-    current = track.scan_project(root)  # fresh, deduped, validated-by-reconstruction
+    current = track.scan_project(root)  # fresh repo state for validation
+    current_keys = {(o["type"], o["name"]) for o in current}
+    current_by_key = {(o["type"], o["name"]): o for o in current}
 
     # Evidence lines, for provenance ("from") - safe if the file is absent.
     ev_path = root / ".ontrack" / "evidence.jsonl"
@@ -65,7 +67,13 @@ def build_inventory(root):
                 for e in evidence if e["type"] == ev_type and e["name"] == ev_name][:1]
 
     items = []
-    for o in current:
+    # Evidence is the source of truth. Only evidence still true in the current
+    # repo can become a confirmed inventory item.
+    evidence_keys = sorted({(e.get("type"), e.get("name")) for e in evidence})
+    for ev_type, ev_name in evidence_keys:
+        if (ev_type, ev_name) not in current_keys:
+            continue
+        o = current_by_key[(ev_type, ev_name)]
         if o["type"] == "dependency":
             name = o["name"]
             items.append({
@@ -82,9 +90,9 @@ def build_inventory(root):
             mapped = EXT_LANG.get(o["name"])
             if not mapped:
                 continue  # skip noise extensions
-            label, what, search = mapped
+            lang_id, label, what, search = mapped
             items.append({
-                "id": f"language:{_slug(label)}",
+                "id": f"language:{lang_id}",
                 "name": label,
                 "kind": "language",
                 "confidence": "confirmed",

@@ -100,10 +100,10 @@ def scan_project(root):
             obs.append(o)
 
     # Dependencies from manifests (search whole tree, not just root).
-    exts = set()
+    ext_sources = {}
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
-        for fn in filenames:
+        for fn in sorted(filenames):
             p = Path(dirpath) / fn
             if fn in MANIFESTS:
                 rel = str(p.relative_to(root)).replace(os.sep, "/")
@@ -112,11 +112,12 @@ def scan_project(root):
                          "source": rel, "detected_at": now})
             ext = p.suffix.lower().lstrip(".")
             if ext:
-                exts.add((ext, str(p.relative_to(root)).replace(os.sep, "/")))
+                rel = str(p.relative_to(root)).replace(os.sep, "/")
+                ext_sources.setdefault(ext, rel)
 
     # One observation per distinct extension (first file seen as source).
-    for ext in sorted({e for e, _ in exts}):
-        src = next(s for e, s in exts if e == ext)
+    for ext in sorted(ext_sources):
+        src = ext_sources[ext]
         add({"type": "file_extension", "name": ext,
              "source": src, "detected_at": now})
 

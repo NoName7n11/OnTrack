@@ -32,6 +32,8 @@ def test_scan_and_append():
         assert {"tsx", "py", "json", "txt", "toml"} <= exts, exts
         assert all("confidence" not in o for o in obs), "observations carry no confidence"
         assert all(o["detected_at"].endswith("Z") for o in obs), "timestamps are UTC Z"
+        assert next(o for o in obs if o["type"] == "file_extension" and o["name"] == "py")[
+            "source"] == "main.py", "extension source is deterministic"
 
         # append writes one JSON line per observation
         track.append_evidence(root, obs)
