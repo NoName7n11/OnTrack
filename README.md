@@ -12,7 +12,8 @@ OnTrack's job is **awareness, not curriculum**. It tells you *what exists* and
 *what to search for*. You learn elsewhere (YouTube, docs). It never claims to know
 what you know — you mark that yourself.
 
-> **Status:** early development. Design is in [PLAN.md](PLAN.md). Not yet functional.
+> **Status:** early development. Core tracking, inventory build, concept merge, and
+> local dashboard pieces are implemented for the Claude Code prototype.
 
 ## How it works
 

@@ -90,10 +90,17 @@ def test_concept_merge():
             # bad confidence -> dropped
             {"id": "concept:react/x", "name": "x",
              "parent": "library:react", "confidence": "confirmed", "where": []},
-            # where file missing -> pruned to empty, concept still kept
+            # where file missing -> inferred concept dropped
             {"id": "concept:react/memo", "name": "memo",
              "parent": "library:react", "confidence": "inferred",
              "where": ["gone.tsx:9"]},
+            # where traversal outside repo -> pruned, inferred concept dropped
+            {"id": "concept:react/outside", "name": "outside",
+             "parent": "library:react", "confidence": "inferred",
+             "where": ["../outside.tsx:1"]},
+            # malformed entries are ignored
+            None,
+            [],
         ]}), encoding="utf-8")
 
         inv = build.build_inventory(root)
@@ -105,12 +112,18 @@ def test_concept_merge():
         assert "concept:react/suspense" in by_id, "possible concept is kept in inventory"
         assert "concept:vue/ref" not in by_id, "orphan concept (no confirmed parent) dropped"
         assert "concept:react/x" not in by_id, "non-inferred/possible confidence dropped"
-        assert by_id["concept:react/memo"]["where"] == [], "missing where file pruned"
+        assert "concept:react/memo" not in by_id, "inferred concept with no evidence dropped"
+        assert "concept:react/outside" not in by_id, "outside-repo where path dropped"
         # every concept points at a real confirmed parent
         conf = {i["id"] for i in inv["items"] if i["confidence"] == "confirmed"}
         for it in inv["items"]:
             if it["kind"] == "concept":
                 assert it["parent"] in conf, it
+
+        for bad in ("[]", "null", '"oops"', '{"concepts": {}}'):
+            (root / ".ontrack" / "concepts.json").write_text(bad, encoding="utf-8")
+            inv = build.build_inventory(root)
+            assert all(i["kind"] != "concept" for i in inv["items"]), bad
 
     print("ok: concepts merged, orphans/bad-confidence dropped, missing where pruned")
 

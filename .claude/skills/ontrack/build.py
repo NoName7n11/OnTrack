@@ -65,7 +65,14 @@ def _load_concepts(root, confirmed_ids):
         except json.JSONDecodeError:
             data = None
     out = []
-    for c in (data or {}).get("concepts", []):
+    if not isinstance(data, dict):
+        return out
+    concepts = data.get("concepts", [])
+    if not isinstance(concepts, list):
+        return out
+    for c in concepts:
+        if not isinstance(c, dict):
+            continue
         conf = c.get("confidence")
         cid = c.get("id")
         parent = c.get("parent")
@@ -75,8 +82,21 @@ def _load_concepts(root, confirmed_ids):
             continue
         if parent not in confirmed_ids:
             continue  # orphan concept — its library/language is gone
-        where = [w for w in (c.get("where") or [])
-                 if (root / str(w).split(":")[0]).exists()]
+        where = []
+        raw_where = c.get("where") or []
+        root_resolved = root.resolve()
+        if isinstance(raw_where, list):
+            for w in raw_where:
+                rel = str(w).split(":", 1)[0]
+                path = (root / rel).resolve()
+                try:
+                    path.relative_to(root_resolved)
+                except ValueError:
+                    continue
+                if path.exists():
+                    where.append(w)
+        if conf == "inferred" and not where:
+            continue
         out.append({
             "id": cid,
             "name": c.get("name") or cid,

@@ -2,6 +2,7 @@
 """Self-check for server.py — run: python .claude/skills/ontrack/test_server.py"""
 import json
 import http.client
+import socket
 import tempfile
 import threading
 from functools import partial
@@ -108,6 +109,18 @@ def test_http_status_route():
             conn.close()
             return res.status, data
 
+        def raw_post_with_bad_length():
+            with socket.create_connection(("127.0.0.1", port), timeout=5) as sock:
+                sock.sendall(
+                    b"POST /status HTTP/1.1\r\n"
+                    b"Host: 127.0.0.1\r\n"
+                    b"Content-Type: application/json\r\n"
+                    b"Content-Length: not-a-number\r\n"
+                    b"Connection: close\r\n"
+                    b"\r\n"
+                )
+                return sock.recv(1024)
+
         try:
             status, _ = post(b'{"id":"library:react","status":"known"}')
             assert status == 200, status
@@ -119,8 +132,8 @@ def test_http_status_route():
                 status, _ = post(body)
                 assert status == 400, (body, status)
 
-            status, _ = post(b"{}", content_length="not-a-number")
-            assert status == 400, status
+            response = raw_post_with_bad_length()
+            assert b" 400 " in response.splitlines()[0], response
 
             data = json.loads((root / ".ontrack" / "personal.json").read_text(
                 encoding="utf-8"))
