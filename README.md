@@ -15,6 +15,25 @@ what you know — you mark that yourself.
 > **Status:** early development. Core tracking, inventory build, concept merge, and
 > local dashboard pieces are implemented for the Claude Code prototype.
 
+## Install
+
+OnTrack is packaged as a Claude Code plugin. This repo is its marketplace.
+
+```
+/plugin marketplace add NoName7n11/OnTrack
+/plugin install ontrack@ontrack
+```
+
+Then in any project, run `/ontrack:ontrack` to build the inventory and open the
+dashboard. A `SessionEnd` hook records observations automatically. (Requires
+Python 3.11+ on PATH.)
+
+To hack on it locally without installing, load the plugin directly:
+
+```
+claude --plugin-dir ./ontrack
+```
+
 ## How it works
 
 1. A Claude Code **`SessionEnd` hook** appends plain observations (deps, file

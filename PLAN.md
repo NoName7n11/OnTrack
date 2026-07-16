@@ -207,12 +207,22 @@ know it") is a *later* hint, never a claim. See deferred "coach" below.
 - **Used-vs-learned coach**: estimate engagement from author signals (hand-edited
   vs Claude-wrote-untouched). Weak proxies only — defer until core proves useful.
 
-## Critical files (to create)
-- `.claude/hooks/track.*` — SessionEnd hook, appends observations to `evidence.jsonl`
-- `.claude/skills/ontrack/SKILL.md` — build inventory + inference + start server
-- `.claude/skills/ontrack/server.*` — stdlib local server, serves dashboard + `POST /status`
-- `.claude/skills/ontrack/dashboard.html` — static data-driven template (committed — it's source)
-- `.claude/skills/ontrack/build.py` — merges confirmed evidence + concepts → inventory
+## Packaging
+Shipped as a Claude Code **plugin** in the `ontrack/` subdir; this repo is also the
+**marketplace** (`.claude-plugin/marketplace.json`). Install:
+`/plugin marketplace add NoName7n11/OnTrack` → `/plugin install ontrack@ontrack`.
+Plugin-internal command paths use `${CLAUDE_PLUGIN_ROOT}`; data still writes to the
+**user project's** `.ontrack/` (hooks/skills run with the project as cwd).
+
+## Critical files
+- `.claude-plugin/marketplace.json` — marketplace catalog (repo root)
+- `ontrack/.claude-plugin/plugin.json` — plugin manifest
+- `ontrack/hooks/hooks.json` — SessionEnd hook wiring (`${CLAUDE_PLUGIN_ROOT}`)
+- `ontrack/hooks/track.py` — appends observations to the project's `evidence.jsonl`
+- `ontrack/skills/ontrack/SKILL.md` — build inventory + inference + start server
+- `ontrack/skills/ontrack/server.py` — stdlib local server, serves dashboard + `POST /status`
+- `ontrack/skills/ontrack/dashboard.html` — static data-driven template (committed — it's source)
+- `ontrack/skills/ontrack/build.py` — merges confirmed evidence + concepts → inventory
 - `.ontrack/evidence.jsonl` — append-only facts (committed)
 - `.ontrack/inventory.json` — derived view (committed)
 - `.ontrack/concepts.json` — LLM-authored inferred/possible concepts (committed)

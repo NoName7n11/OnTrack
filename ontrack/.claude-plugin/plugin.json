@@ -1,0 +1,11 @@
+{
+  "name": "ontrack",
+  "description": "Know what you built — passively tracks what your project uses (deps, languages, concepts) and shows a local dashboard of what to learn.",
+  "version": "0.1.0",
+  "author": {
+    "name": "NoName7n11"
+  },
+  "homepage": "https://github.com/NoName7n11/OnTrack",
+  "repository": "https://github.com/NoName7n11/OnTrack",
+  "license": "Apache-2.0"
+}

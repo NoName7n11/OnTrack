@@ -13,7 +13,7 @@ and it does NOT claim to know what the user already knows. See `PLAN.md`.
 
 1. Refresh the deterministic inventory first, so confirmed parent IDs are current:
    ```
-   python .claude/skills/ontrack/build.py
+   python "${CLAUDE_PLUGIN_ROOT}/skills/ontrack/build.py"
    ```
 
 2. **Concept-inference pass (you, the model, do this).** Look at the confirmed
@@ -48,7 +48,7 @@ and it does NOT claim to know what the user already knows. See `PLAN.md`.
 3. Regenerate the inventory again (merges confirmed evidence + your concepts, each
    validated against the current repo):
    ```
-   python .claude/skills/ontrack/build.py
+   python "${CLAUDE_PLUGIN_ROOT}/skills/ontrack/build.py"
    ```
    This rewrites `.ontrack/inventory.json` (only if changed). Stale evidence
    (removed deps, deleted file types) and orphaned concepts (parent gone) drop
@@ -56,7 +56,7 @@ and it does NOT claim to know what the user already knows. See `PLAN.md`.
 
 4. Start the dashboard server **in the background** (it blocks while serving):
    ```
-   python .claude/skills/ontrack/server.py
+   python "${CLAUDE_PLUGIN_ROOT}/skills/ontrack/server.py"
    ```
    It binds `127.0.0.1` and prints the URL (default
    `http://localhost:3874`, incrementing if the port is busy).

@@ -1,0 +1,14 @@
+{
+  "name": "ontrack",
+  "description": "OnTrack — know what you built. Passive tech/concept tracking with a learn-what-you-don't-know dashboard.",
+  "owner": {
+    "name": "NoName7n11"
+  },
+  "plugins": [
+    {
+      "name": "ontrack",
+      "source": "./ontrack",
+      "description": "Know what you built — passively tracks what your project uses, so you know what to learn."
+    }
+  ]
+}
