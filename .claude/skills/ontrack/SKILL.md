@@ -11,9 +11,14 @@ and it does NOT claim to know what the user already knows. See `PLAN.md`.
 
 ## Steps
 
-1. **Concept-inference pass (you, the model, do this).** Look at the confirmed
-   libraries/languages the project uses (read the current `.ontrack/inventory.json`
-   if it exists, or the manifests) and read a sample of the project's own source
+1. Refresh the deterministic inventory first, so confirmed parent IDs are current:
+   ```
+   python .claude/skills/ontrack/build.py
+   ```
+
+2. **Concept-inference pass (you, the model, do this).** Look at the confirmed
+   libraries/languages the project uses by reading the refreshed
+   `.ontrack/inventory.json`, then read a sample of the project's own source
    files (skip `node_modules`, `.venv`, build output, `.ontrack`). For each
    confirmed library/language, identify the **specific concepts actually used in
    this code** — e.g. under React: `useEffect`, `useState`, JSX, props, conditional
@@ -34,10 +39,13 @@ and it does NOT claim to know what the user already knows. See `PLAN.md`.
    - `confidence: "inferred"` only when you can point at real code (`where` =
      `file:line`). Use `confidence: "possible"` for a weak/ambient guess with no
      concrete line — these are hidden on the dashboard by default.
+   - `where` paths are **repo-relative and use forward slashes** (`src/App.tsx:14`,
+     not `C:\...` or `\`-separated). `build.py` drops any `where` path that resolves
+     outside the repo, and drops an `inferred` concept left with no valid `where`.
    - One line of `what`; a ready `search` query. Do NOT teach or explain.
    - Only list concepts genuinely present in the code. No speculative curriculum.
 
-2. Regenerate the inventory (merges confirmed evidence + your concepts, each
+3. Regenerate the inventory again (merges confirmed evidence + your concepts, each
    validated against the current repo):
    ```
    python .claude/skills/ontrack/build.py
@@ -46,14 +54,14 @@ and it does NOT claim to know what the user already knows. See `PLAN.md`.
    (removed deps, deleted file types) and orphaned concepts (parent gone) drop
    out automatically.
 
-3. Start the dashboard server **in the background** (it blocks while serving):
+4. Start the dashboard server **in the background** (it blocks while serving):
    ```
    python .claude/skills/ontrack/server.py
    ```
    It binds `127.0.0.1` and prints the URL (default
    `http://localhost:3874`, incrementing if the port is busy).
 
-4. Tell the user to open that URL. On the dashboard they mark each item's status
+5. Tell the user to open that URL. On the dashboard they mark each item's status
    (Known / Somewhat / To learn / Ignore); items sort into **To Review /
    Learning / Learned / Ignored**, with concepts nested under their library.
    `possible` concepts are hidden until the user ticks "show possible". Marks save
