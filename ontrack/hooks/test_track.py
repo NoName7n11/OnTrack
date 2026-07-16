@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Self-check for track.py — run: python .claude/hooks/test_track.py"""
+"""Self-check for track.py — run: python ontrack/hooks/test_track.py"""
 import json
 import tempfile
 from pathlib import Path

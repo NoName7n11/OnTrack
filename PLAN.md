@@ -15,7 +15,7 @@ know what the user knows**. It surfaces what the project uses + explains each it
 in one line + hands a good search term. The user decides what they know; learning
 happens outside the tool. This keeps it small and honest.
 
-Repo currently empty (blank `INTRO.md`). Building from scratch.
+Repo is packaged as a Claude Code plugin marketplace for alpha testing.
 
 ## Architecture — data format is the product
 The `.ontrack` data format is the core. Everything else is an adapter or interface
@@ -25,7 +25,9 @@ portability is a property of the plain-JSON format, not of extra code.
 - **Core**: `.ontrack/` data format (evidence + inventory + personal).
 - **Adapter 1** (v1): Claude Code `SessionEnd` hook — appends evidence.
 - **Interface 1** (v1): Claude skill `/ontrack` — builds inventory, serves dashboard.
-- **Future**: Codex command, Cursor rule, standalone CLI. Each is "another script
+- **Adapter 2**: Codex local wrapper (`codex/ontrack.py`) — records observations,
+  builds inventory, and serves the dashboard without Claude plugin install.
+- **Future**: Cursor rule, standalone CLI. Each is "another script
   that appends to `evidence.jsonl`" — cheap to add *because* no adapter layer exists.
 
 ## Data model — evidence vs inventory (the key split)
@@ -146,7 +148,8 @@ Fires once per session (cheap, quiet). Writes **observations only** (no confiden
 field), from concrete signals:
 - Manifests: `package.json`, `requirements.txt`, `Cargo.toml`, `go.mod`, etc.
 - File extensions + config files (`.tsx`, YAML, Dockerfile, CI configs).
-- Commands run (npm, pytest, docker).
+- Command-run observations are deliberately deferred until hook payload support is
+  clear.
 
 Appends each as one line to `evidence.jsonl`. Dumb by design — no dedup, no
 interpretation, no state read.
@@ -214,7 +217,15 @@ Shipped as a Claude Code **plugin** in the `ontrack/` subdir; this repo is also 
 Plugin-internal command paths use `${CLAUDE_PLUGIN_ROOT}`; data still writes to the
 **user project's** `.ontrack/` (hooks/skills run with the project as cwd).
 
+Codex uses the same implementation through `codex/ontrack.py` plus `AGENTS.md`.
+This is intentionally local and explicit: Codex runs `snapshot`, writes
+`.ontrack/concepts.json`, runs `build`, and starts `serve` when the user wants the
+dashboard.
+
 ## Critical files
+- `AGENTS.md` — Codex workflow instructions
+- `codex/ontrack.py` — Codex/local wrapper for record/build/serve
+- `codex/test_ontrack.py` — wrapper self-check
 - `.claude-plugin/marketplace.json` — marketplace catalog (repo root)
 - `ontrack/.claude-plugin/plugin.json` — plugin manifest
 - `ontrack/hooks/hooks.json` — SessionEnd hook wiring (`${CLAUDE_PLUGIN_ROOT}`)
@@ -228,8 +239,7 @@ Plugin-internal command paths use `${CLAUDE_PLUGIN_ROOT}`; data still writes to 
 - `.ontrack/concepts.json` — LLM-authored inferred/possible concepts (committed)
 - `.ontrack/personal.json` — private per-item status (gitignored)
 - `.gitignore` — ignore `personal.json` only
-- settings / `hooks.json` — wire the hook
-- `README.md` — replace empty INTRO.md
+- `README.md` — install/use docs for alpha reviewers
 
 ## Build order
 1. Data format: `evidence.jsonl` line schema + `inventory.json` schema. Format first.

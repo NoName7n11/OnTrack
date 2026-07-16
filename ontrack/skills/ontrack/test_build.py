@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Self-check for build.py — run: python .claude/skills/ontrack/test_build.py"""
+"""Self-check for build.py — run: python ontrack/skills/ontrack/test_build.py"""
 import json
 import tempfile
 from pathlib import Path

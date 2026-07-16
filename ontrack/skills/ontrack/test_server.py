@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Self-check for server.py — run: python .claude/skills/ontrack/test_server.py"""
+"""Self-check for server.py — run: python ontrack/skills/ontrack/test_server.py"""
 import json
 import http.client
 import socket

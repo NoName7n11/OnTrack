@@ -34,10 +34,34 @@ To hack on it locally without installing, load the plugin directly:
 claude --plugin-dir ./ontrack
 ```
 
+## Codex local use
+
+Codex can use the same `.ontrack/` data format through the local wrapper (commands
+work as-is on Windows, macOS, and Linux):
+
+```
+python codex/ontrack.py snapshot
+```
+
+Then Codex writes code-backed concepts to `.ontrack/concepts.json`, rebuilds:
+
+```
+python codex/ontrack.py build
+```
+
+and can start the dashboard when you want to mark statuses. `serve` blocks; add
+`--background` to run it detached (logs to `.ontrack/server.out` / `server.err`):
+
+```
+python codex/ontrack.py serve --background
+```
+
+See [AGENTS.md](AGENTS.md) for the Codex workflow.
+
 ## How it works
 
-1. A Claude Code **`SessionEnd` hook** appends plain observations (deps, file
-   types, commands run) to `.ontrack/evidence.jsonl` — boring facts, no guessing.
+1. A Claude Code **`SessionEnd` hook** appends plain observations (deps and file
+   types) to `.ontrack/evidence.jsonl` — boring facts, no guessing.
 2. The **`/ontrack` skill** runs a light inference pass over the code to name the
    specific concepts in use (React → `useEffect`, JSX, props) into
    `.ontrack/concepts.json`, then `build.py` validates observations + concepts
