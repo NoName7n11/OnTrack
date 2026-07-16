@@ -39,8 +39,56 @@ EXT_LANG = {
 }
 
 
+CONCEPT_CONF = {"inferred", "possible"}
+
+
 def _slug(s):
     return re.sub(r"-+", "-", re.sub(r"[^a-z0-9]+", "-", s.lower())).strip("-")
+
+
+def _load_concepts(root, confirmed_ids):
+    """Load LLM-authored concept items from concepts.json and validate them.
+
+    Concepts are the `inferred`/`possible` layer written by the /ontrack skill's
+    inference pass (Claude), kept in a separate file so build.py never clobbers
+    them. Validation keeps them honest against the current repo:
+    - confidence must be inferred|possible (confirmed is deterministic-only),
+    - parent must be a currently-confirmed item id (orphans are dropped),
+    - `where` file paths that no longer exist are pruned.
+    """
+    root = Path(root)
+    data = None
+    p = root / ".ontrack" / "concepts.json"
+    if p.exists():
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            data = None
+    out = []
+    for c in (data or {}).get("concepts", []):
+        conf = c.get("confidence")
+        cid = c.get("id")
+        parent = c.get("parent")
+        if conf not in CONCEPT_CONF:
+            continue
+        if not cid or ":" not in cid:
+            continue
+        if parent not in confirmed_ids:
+            continue  # orphan concept — its library/language is gone
+        where = [w for w in (c.get("where") or [])
+                 if (root / str(w).split(":")[0]).exists()]
+        out.append({
+            "id": cid,
+            "name": c.get("name") or cid,
+            "kind": "concept",
+            "parent": parent,
+            "confidence": conf,
+            "what": c.get("what", ""),
+            "where": where,
+            "search": c.get("search") or c.get("name") or cid,
+            "from": c.get("from", []),
+        })
+    return out
 
 
 def build_inventory(root):
@@ -101,6 +149,11 @@ def build_inventory(root):
                 "search": search,
                 "from": provenance("file_extension", o["name"]),
             })
+
+    # Merge the LLM-authored concept layer (inferred/possible), validated against
+    # the confirmed items just built. Confirmed wins on id collision (dedup below).
+    confirmed_ids = {it["id"] for it in items}
+    items.extend(_load_concepts(root, confirmed_ids))
 
     # Stable order → no churn: sort by id, dedup ids (keep first).
     seen, unique = set(), []

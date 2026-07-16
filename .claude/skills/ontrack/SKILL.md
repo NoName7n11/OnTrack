@@ -11,23 +11,53 @@ and it does NOT claim to know what the user already knows. See `PLAN.md`.
 
 ## Steps
 
-1. Regenerate the inventory from evidence, validated against the current repo:
+1. **Concept-inference pass (you, the model, do this).** Look at the confirmed
+   libraries/languages the project uses (read the current `.ontrack/inventory.json`
+   if it exists, or the manifests) and read a sample of the project's own source
+   files (skip `node_modules`, `.venv`, build output, `.ontrack`). For each
+   confirmed library/language, identify the **specific concepts actually used in
+   this code** — e.g. under React: `useEffect`, `useState`, JSX, props, conditional
+   rendering; under a JWT dep: token signing, refresh flow. Write them to
+   `.ontrack/concepts.json`:
+   ```json
+   { "concepts": [
+     { "id": "concept:react/useeffect", "name": "useEffect",
+       "parent": "library:react", "confidence": "inferred",
+       "what": "Run side effects after render",
+       "where": ["src/App.tsx:14"], "search": "react useeffect tutorial" }
+   ] }
+   ```
+   Rules — this is where honesty is enforced:
+   - `id` = `concept:<parent-slug>/<concept-slug>`. `parent` MUST be the `id` of a
+     confirmed inventory item (`library:*` / `language:*`); a concept with no
+     confirmed parent is dropped by `build.py`.
+   - `confidence: "inferred"` only when you can point at real code (`where` =
+     `file:line`). Use `confidence: "possible"` for a weak/ambient guess with no
+     concrete line — these are hidden on the dashboard by default.
+   - One line of `what`; a ready `search` query. Do NOT teach or explain.
+   - Only list concepts genuinely present in the code. No speculative curriculum.
+
+2. Regenerate the inventory (merges confirmed evidence + your concepts, each
+   validated against the current repo):
    ```
    python .claude/skills/ontrack/build.py
    ```
    This rewrites `.ontrack/inventory.json` (only if changed). Stale evidence
-   (removed deps, deleted file types) is dropped automatically.
+   (removed deps, deleted file types) and orphaned concepts (parent gone) drop
+   out automatically.
 
-2. Start the dashboard server **in the background** (it blocks while serving):
+3. Start the dashboard server **in the background** (it blocks while serving):
    ```
    python .claude/skills/ontrack/server.py
    ```
    It binds `127.0.0.1` and prints the URL (default
    `http://localhost:3874`, incrementing if the port is busy).
 
-3. Tell the user to open that URL. On the dashboard they mark each item's status
+4. Tell the user to open that URL. On the dashboard they mark each item's status
    (Known / Somewhat / To learn / Ignore); items sort into **To Review /
-   Learning / Learned / Ignored**. Marks save to `.ontrack/personal.json`.
+   Learning / Learned / Ignored**, with concepts nested under their library.
+   `possible` concepts are hidden until the user ticks "show possible". Marks save
+   to `.ontrack/personal.json`.
 
 You may also give a quick text summary of the inventory, but the dashboard is the
 primary view. Do not explain or teach the technologies — the point is the user
@@ -36,6 +66,8 @@ decides what they don't know and learns it elsewhere.
 ## Boundaries
 
 - Never hand-edit `inventory.json` — it is derived; rerun `build.py` instead.
+- `concepts.json` is your inference output; `build.py` validates and merges it.
+  Confirmed items always win over a concept on id collision.
 - The server writes only `.ontrack/personal.json`; `inventory.json` is read-only to it.
-- `confirmed` items only exist here yet; `inferred`/`possible` concepts come with
-  the later LLM pass.
+- Confidence is honest by construction: `confirmed` = deterministic evidence,
+  `inferred` = code-backed concept, `possible` = weak guess (hidden by default).

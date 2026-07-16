@@ -67,5 +67,54 @@ def test_build_inventory():
     print("ok: confirmed inventory built, stale dropped, noise skipped, no churn")
 
 
+def test_concept_merge():
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        (root / "package.json").write_text('{"dependencies":{"react":"^18"}}')
+        (root / "App.tsx").write_text("export {}")
+        (root / ".ontrack").mkdir()
+        (root / ".ontrack" / "evidence.jsonl").write_text(
+            '{"type":"dependency","name":"react","source":"package.json","detected_at":"x"}\n')
+        # concepts authored by the LLM pass
+        (root / ".ontrack" / "concepts.json").write_text(json.dumps({"concepts": [
+            # valid: parent confirmed (library:react), file exists
+            {"id": "concept:react/useeffect", "name": "useEffect",
+             "parent": "library:react", "confidence": "inferred",
+             "what": "side effects", "where": ["App.tsx:3"], "search": "react useeffect"},
+            # possible confidence is kept (dashboard hides it, build keeps it)
+            {"id": "concept:react/suspense", "name": "Suspense",
+             "parent": "library:react", "confidence": "possible", "where": []},
+            # orphan: parent not confirmed -> dropped
+            {"id": "concept:vue/ref", "name": "ref",
+             "parent": "library:vue", "confidence": "inferred", "where": []},
+            # bad confidence -> dropped
+            {"id": "concept:react/x", "name": "x",
+             "parent": "library:react", "confidence": "confirmed", "where": []},
+            # where file missing -> pruned to empty, concept still kept
+            {"id": "concept:react/memo", "name": "memo",
+             "parent": "library:react", "confidence": "inferred",
+             "where": ["gone.tsx:9"]},
+        ]}), encoding="utf-8")
+
+        inv = build.build_inventory(root)
+        by_id = {i["id"]: i for i in inv["items"]}
+
+        assert "library:react" in by_id, "confirmed parent present"
+        assert by_id["concept:react/useeffect"]["kind"] == "concept"
+        assert by_id["concept:react/useeffect"]["where"] == ["App.tsx:3"], "existing file kept"
+        assert "concept:react/suspense" in by_id, "possible concept is kept in inventory"
+        assert "concept:vue/ref" not in by_id, "orphan concept (no confirmed parent) dropped"
+        assert "concept:react/x" not in by_id, "non-inferred/possible confidence dropped"
+        assert by_id["concept:react/memo"]["where"] == [], "missing where file pruned"
+        # every concept points at a real confirmed parent
+        conf = {i["id"] for i in inv["items"] if i["confidence"] == "confirmed"}
+        for it in inv["items"]:
+            if it["kind"] == "concept":
+                assert it["parent"] in conf, it
+
+    print("ok: concepts merged, orphans/bad-confidence dropped, missing where pruned")
+
+
 if __name__ == "__main__":
     test_build_inventory()
+    test_concept_merge()

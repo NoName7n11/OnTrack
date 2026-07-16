@@ -18,21 +18,25 @@ what you know — you mark that yourself.
 
 1. A Claude Code **`SessionEnd` hook** appends plain observations (deps, file
    types, commands run) to `.ontrack/evidence.jsonl` — boring facts, no guessing.
-2. The **`/ontrack` skill** validates those observations against the current repo,
-   runs a light inference pass for concept-level items, and writes
-   `.ontrack/inventory.json` (what the project uses).
+2. The **`/ontrack` skill** runs a light inference pass over the code to name the
+   specific concepts in use (React → `useEffect`, JSX, props) into
+   `.ontrack/concepts.json`, then `build.py` validates observations + concepts
+   against the current repo and writes `.ontrack/inventory.json` (what the project
+   uses). Each item is labelled `confirmed` (deterministic), `inferred`
+   (code-backed concept), or `possible` (weak guess).
 3. A **local dashboard** (`localhost:3874`) renders the inventory grouped into
-   **To Review / Learning / Learned / Ignored**. You mark each item's status; it
+   **To Review / Learning / Learned / Ignored**, concepts nested under their
+   library (`possible` hidden until you ask). You mark each item's status; it
    saves to `.ontrack/personal.json` (private, git-ignored).
 
-Two files, two owners:
+Data files, by owner:
 
-| File                      | Owner              | Committed? |
-|---------------------------|--------------------|------------|
-| `.ontrack/evidence.jsonl` | hook (observations)| yes        |
-| `.ontrack/inventory.json` | `/ontrack` (derived)| yes       |
-| `.ontrack/dashboard.html` | template (source)  | yes        |
-| `.ontrack/personal.json`  | you (your status)  | **no**     |
+| File                      | Owner                    | Committed? |
+|---------------------------|--------------------------|------------|
+| `.ontrack/evidence.jsonl` | hook (observations)      | yes        |
+| `.ontrack/concepts.json`  | `/ontrack` LLM inference | yes        |
+| `.ontrack/inventory.json` | `build.py` (derived)     | yes        |
+| `.ontrack/personal.json`  | you (your status)        | **no**     |
 
 The project's tech **is** your knowledge map — that's why tracking the project
 tells you what you need to know.

@@ -27,6 +27,12 @@
   .row { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
   .name { font-weight: 600; }
   .kind { font-size: 11px; color: #9aa1ad; text-transform: uppercase; letter-spacing: .04em; }
+  .conf { font-size: 10px; padding: 1px 6px; border-radius: 999px; margin-left: 6px;
+          text-transform: uppercase; letter-spacing: .04em; }
+  .conf.inferred { background: #2b2f3a; color: #9db4d8; }
+  .conf.possible { background: #332b2b; color: #d8a99d; }
+  .toggle { font-size: 12.5px; color: #9aa1ad; margin-top: 8px; display: inline-flex;
+            align-items: center; gap: 6px; cursor: pointer; }
   .what { color: #c3c8d2; font-size: 13.5px; margin: 4px 0 6px; }
   .meta { font-size: 12.5px; color: #9aa1ad; }
   .meta a { color: #6cb6ff; text-decoration: none; }
@@ -44,6 +50,7 @@
 <header>
   <h1>OnTrack</h1>
   <div class="sub">What this project uses. Mark what you know — go learn the rest. OnTrack points; it doesn't teach.</div>
+  <label class="toggle"><input type="checkbox" id="showPossible"> show possible (weak-signal) concepts</label>
 </header>
 <main id="app"><div class="empty">Loading…</div></main>
 
@@ -66,6 +73,7 @@ const SECTIONS = [
 
 let inventory = { items: [] };
 let status = {}; // id -> status
+let showPossible = false;
 
 async function load() {
   const [inv, pers] = await Promise.all([
@@ -116,6 +124,12 @@ function card(item) {
     <div class="radios"></div>`;
   el.querySelector(".name").textContent = item.name;
   el.querySelector(".kind").textContent = item.kind || "";
+  if (item.confidence === "inferred" || item.confidence === "possible") {
+    const c = document.createElement("span");
+    c.className = "conf " + item.confidence;
+    c.textContent = item.confidence;
+    el.querySelector(".kind").after(c);
+  }
   el.querySelector(".what").textContent = item.what || "";
   el.querySelector(".where").textContent = where;
   const a = el.querySelector("a");
@@ -139,7 +153,9 @@ function render() {
   app.innerHTML = "";
   // group items by section; keep children next to their parent within a section
   const buckets = { review: [], learning: [], learned: [], ignored: [] };
-  for (const item of inventory.items) buckets[sectionOf(status[item.id])].push(item);
+  const visible = inventory.items.filter(
+    i => showPossible || i.confidence !== "possible");
+  for (const item of visible) buckets[sectionOf(status[item.id])].push(item);
 
   for (const [key, title] of SECTIONS) {
     const items = buckets[key];
@@ -168,6 +184,11 @@ function render() {
     app.appendChild(sec);
   }
 }
+
+document.getElementById("showPossible").addEventListener("change", (e) => {
+  showPossible = e.target.checked;
+  render();
+});
 
 load();
 </script>

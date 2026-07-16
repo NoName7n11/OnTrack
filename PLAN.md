@@ -90,6 +90,21 @@ is keyed by `id`, not display name — survives renames and same-name collisions
 Hierarchy guides *which* questions to ask — it NEVER assumes: React "known" does not
 mark `useEffect` learned. Each node is answered independently.
 
+### `.ontrack/concepts.json` — LLM-authored concept layer (committed)
+Written by the `/ontrack` inference pass (Claude), kept **separate from
+inventory.json** so the deterministic `build.py` never clobbers it. Holds only
+`inferred`/`possible` concept items, each with a `parent` that must be a confirmed
+inventory id. `build.py` validates and merges these into `inventory.json`:
+orphaned concepts (parent gone) are dropped; `where` file paths that no longer
+exist are pruned; `confirmed` always wins on an id collision.
+```json
+{ "concepts": [
+  { "id": "concept:react/useeffect", "name": "useEffect", "parent": "library:react",
+    "confidence": "inferred", "what": "Run side effects after render",
+    "where": ["src/App.tsx:14"], "search": "react useeffect tutorial" }
+] }
+```
+
 ### `.ontrack/personal.json` — private per-user state (gitignored)
 **The only file the dashboard writes.** Per-item learning status, keyed by `id`.
 Not inferred — user *tells* it. Affects **display only**, never touches
@@ -197,8 +212,10 @@ know it") is a *later* hint, never a claim. See deferred "coach" below.
 - `.claude/skills/ontrack/SKILL.md` — build inventory + inference + start server
 - `.claude/skills/ontrack/server.*` — stdlib local server, serves dashboard + `POST /status`
 - `.claude/skills/ontrack/dashboard.html` — static data-driven template (committed — it's source)
+- `.claude/skills/ontrack/build.py` — merges confirmed evidence + concepts → inventory
 - `.ontrack/evidence.jsonl` — append-only facts (committed)
 - `.ontrack/inventory.json` — derived view (committed)
+- `.ontrack/concepts.json` — LLM-authored inferred/possible concepts (committed)
 - `.ontrack/personal.json` — private per-item status (gitignored)
 - `.gitignore` — ignore `personal.json` only
 - settings / `hooks.json` — wire the hook
@@ -209,7 +226,7 @@ know it") is a *later* hint, never a claim. See deferred "coach" below.
 2. Tracker hook → writes confirmed evidence. Prove passive capture.
 3. `/ontrack` builds `inventory.json` from confirmed evidence. Prove core loop.
 4. Dashboard + server: render sections, radios, `POST /status` → `personal.json`.
-5. Add LLM inference pass → `inferred`/`possible` concepts + `parent`. The value.
+5. Add LLM inference pass → `inferred`/`possible` concepts + `parent`. The value. **[done]**
 6. (Only if wanted) roadmap ordering; used-vs-learned coach.
 
 ## Verification
