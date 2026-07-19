@@ -246,7 +246,8 @@ Plugin-internal command paths use `${CLAUDE_PLUGIN_ROOT}`; data still writes to 
 3. `/ontrack` builds `inventory.json` from confirmed evidence. Prove core loop.
 4. Dashboard + server: render sections, radios, `POST /status` → `personal.json`.
 5. Add LLM inference pass → `inferred`/`possible` concepts + `parent`. The value. **[done]**
-6. (Only if wanted) roadmap ordering; used-vs-learned coach.
+6. Roadmap ordering — numbered Learning path by `level`. **[done]**
+7. (Only if wanted) re-verify learning (evidence-driven); used-vs-learned coach.
 
 ## Verification
 - Tracker: build a throwaway React+auth project in a session → confirm
