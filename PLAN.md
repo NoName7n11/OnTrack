@@ -25,9 +25,7 @@ portability is a property of the plain-JSON format, not of extra code.
 - **Core**: `.ontrack/` data format (evidence + inventory + personal).
 - **Adapter 1** (v1): Claude Code `SessionEnd` hook — appends evidence.
 - **Interface 1** (v1): Claude skill `/ontrack` — builds inventory, serves dashboard.
-- **Adapter 2**: Codex local wrapper (`codex/ontrack.py`) — records observations,
-  builds inventory, and serves the dashboard without Claude plugin install.
-- **Future**: Cursor rule, standalone CLI. Each is "another script
+- **Future**: Codex wrapper/command, Cursor rule, standalone CLI. Each is "another script
   that appends to `evidence.jsonl`" — cheap to add *because* no adapter layer exists.
 
 ## Data model — evidence vs inventory (the key split)
@@ -204,9 +202,18 @@ no claim. Dashboard shows everything used; the **user** self-classifies via stat
 radios → `personal.json`. Author-signal ("Claude wrote this untouched — you may not
 know it") is a *later* hint, never a claim. See deferred "coach" below.
 
-## Deferred (NOT v1 — over-build for the stated goal)
-- **Roadmap generator**: order unknowns into a learning sequence. Add if a flat
-  list proves insufficient.
+## Post-v1
+- **Roadmap ordering** *(done)*: the Learning section is a numbered study path —
+  parents (library/language) first, then their concepts sorted by an optional
+  `level` (`basic` < `intermediate` < `advanced`) the inference pass may set on a
+  concept. `build.py` passes a valid `level` through; the dashboard numbers and
+  orders by it. No prerequisite graph — the parent hierarchy + level is enough.
+- **Re-verify learning** *(planned, evidence-driven)*: timestamp each mark
+  (`marked_at`); on rebuild, if a `known` item's `where` code changed after that,
+  nudge "re-check". Tests the evidence, not the user's memory — keeps the honesty
+  boundary. No quizzes.
+
+## Deferred (still not built)
 - **Used-vs-learned coach**: estimate engagement from author signals (hand-edited
   vs Claude-wrote-untouched). Weak proxies only — defer until core proves useful.
 
@@ -217,15 +224,7 @@ Shipped as a Claude Code **plugin** in the `ontrack/` subdir; this repo is also 
 Plugin-internal command paths use `${CLAUDE_PLUGIN_ROOT}`; data still writes to the
 **user project's** `.ontrack/` (hooks/skills run with the project as cwd).
 
-Codex uses the same implementation through `codex/ontrack.py` plus `AGENTS.md`.
-This is intentionally local and explicit: Codex runs `snapshot`, writes
-`.ontrack/concepts.json`, runs `build`, and starts `serve` when the user wants the
-dashboard.
-
 ## Critical files
-- `AGENTS.md` — Codex workflow instructions
-- `codex/ontrack.py` — Codex/local wrapper for record/build/serve
-- `codex/test_ontrack.py` — wrapper self-check
 - `.claude-plugin/marketplace.json` — marketplace catalog (repo root)
 - `ontrack/.claude-plugin/plugin.json` — plugin manifest
 - `ontrack/hooks/hooks.json` — SessionEnd hook wiring (`${CLAUDE_PLUGIN_ROOT}`)

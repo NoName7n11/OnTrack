@@ -77,13 +77,14 @@ def test_concept_merge():
             '{"type":"dependency","name":"react","source":"package.json","detected_at":"x"}\n')
         # concepts authored by the LLM pass
         (root / ".ontrack" / "concepts.json").write_text(json.dumps({"concepts": [
-            # valid: parent confirmed (library:react), file exists
+            # valid: parent confirmed (library:react), file exists, valid level kept
             {"id": "concept:react/useeffect", "name": "useEffect",
-             "parent": "library:react", "confidence": "inferred",
+             "parent": "library:react", "confidence": "inferred", "level": "basic",
              "what": "side effects", "where": ["App.tsx:3"], "search": "react useeffect"},
-            # possible confidence is kept (dashboard hides it, build keeps it)
+            # possible confidence is kept; invalid level is dropped from the item
             {"id": "concept:react/suspense", "name": "Suspense",
-             "parent": "library:react", "confidence": "possible", "where": []},
+             "parent": "library:react", "confidence": "possible", "level": "expert",
+             "where": []},
             # orphan: parent not confirmed -> dropped
             {"id": "concept:vue/ref", "name": "ref",
              "parent": "library:vue", "confidence": "inferred", "where": []},
@@ -114,6 +115,8 @@ def test_concept_merge():
         assert "concept:react/x" not in by_id, "non-inferred/possible confidence dropped"
         assert "concept:react/memo" not in by_id, "inferred concept with no evidence dropped"
         assert "concept:react/outside" not in by_id, "outside-repo where path dropped"
+        assert by_id["concept:react/useeffect"]["level"] == "basic", "valid level kept"
+        assert "level" not in by_id["concept:react/suspense"], "invalid level omitted"
         # every concept points at a real confirmed parent
         conf = {i["id"] for i in inv["items"] if i["confidence"] == "confirmed"}
         for it in inv["items"]:

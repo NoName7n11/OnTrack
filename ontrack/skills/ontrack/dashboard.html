@@ -44,6 +44,11 @@
   .radios input { display: none; }
   .radios label.on { background: #2b3140; border-color: #6cb6ff; color: #fff; }
   .badge { font-size: 11px; color: #6b7280; }
+  .step { display: inline-block; min-width: 20px; color: #6cb6ff; font-weight: 700;
+          margin-right: 8px; }
+  .level { font-size: 10px; padding: 1px 6px; border-radius: 999px; margin-left: 6px;
+           background: #23262e; color: #9aa1ad; text-transform: uppercase; letter-spacing: .04em; }
+  .path-hint { font-size: 12px; color: #6cb6ff; margin: -4px 0 10px; }
 </style>
 </head>
 <body>
@@ -70,6 +75,12 @@ const SECTIONS = [
   ["review", "To Review"], ["learning", "Learning"],
   ["learned", "Learned"], ["ignored", "Ignored"],
 ];
+// Roadmap ordering: basic before advanced; unset difficulty sits in the middle.
+const LEVEL_ORDER = { basic: 0, intermediate: 1, advanced: 2 };
+function levelRank(i) { return LEVEL_ORDER[i.level] ?? 1; }
+function byOrder(a, b) {
+  return levelRank(a) - levelRank(b) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+}
 
 let inventory = { items: [] };
 let status = {}; // id -> status
@@ -110,7 +121,7 @@ function ytLink(q) {
   return "https://www.youtube.com/results?search_query=" + encodeURIComponent(q);
 }
 
-function card(item) {
+function card(item, step) {
   const el = document.createElement("div");
   el.className = "card" + (item.parent ? " child" : "");
   const where = (item.where || []).join(", ");
@@ -122,7 +133,20 @@ function card(item) {
       ${where ? " · " : ""}<a target="_blank" rel="noopener"></a>
     </div>
     <div class="radios"></div>`;
-  el.querySelector(".name").textContent = item.name;
+  const nameEl = el.querySelector(".name");
+  if (step != null) {
+    const s = document.createElement("span");
+    s.className = "step";
+    s.textContent = step + ".";
+    nameEl.before(s);
+  }
+  nameEl.textContent = item.name;
+  if (item.level) {
+    const lv = document.createElement("span");
+    lv.className = "level";
+    lv.textContent = item.level;
+    nameEl.after(lv);
+  }
   el.querySelector(".kind").textContent = item.kind || "";
   if (item.confidence === "inferred" || item.confidence === "possible") {
     const c = document.createElement("span");
@@ -169,17 +193,27 @@ function render() {
       e.textContent = "nothing here";
       sec.appendChild(e);
     } else {
-      // parents first, each followed by its children present in this bucket
-      const parents = items.filter(i => !i.parent);
+      // Learning is a study path: number it, basics before advanced.
+      const numbered = key === "learning";
+      if (numbered) {
+        const hint = document.createElement("div");
+        hint.className = "path-hint";
+        hint.textContent = "Study in this order — foundations first:";
+        sec.appendChild(hint);
+      }
+      let step = 0;
+      const emit = (item) => { step += 1; sec.appendChild(card(item, numbered ? step : null)); };
+      // parents first (id order), each followed by its children sorted by level
+      const parents = items.filter(i => !i.parent).sort(byOrder);
       const children = items.filter(i => i.parent);
       const placed = new Set();
       for (const p of parents) {
-        sec.appendChild(card(p)); placed.add(p.id);
-        for (const c of children.filter(c => c.parent === p.id)) {
-          sec.appendChild(card(c)); placed.add(c.id);
+        emit(p); placed.add(p.id);
+        for (const c of children.filter(c => c.parent === p.id).sort(byOrder)) {
+          emit(c); placed.add(c.id);
         }
       }
-      for (const c of children) if (!placed.has(c.id)) sec.appendChild(card(c));
+      for (const c of children.slice().sort(byOrder)) if (!placed.has(c.id)) emit(c);
     }
     app.appendChild(sec);
   }

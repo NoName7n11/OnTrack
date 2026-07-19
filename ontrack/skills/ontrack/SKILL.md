@@ -42,6 +42,9 @@ and it does NOT claim to know what the user already knows. See `PLAN.md`.
    - `where` paths are **repo-relative and use forward slashes** (`src/App.tsx:14`,
      not `C:\...` or `\`-separated). `build.py` drops any `where` path that resolves
      outside the repo, and drops an `inferred` concept left with no valid `where`.
+   - Optional `level`: `"basic"` | `"intermediate"` | `"advanced"` — the concept's
+     learning difficulty. The dashboard orders the Learning path by it (basics
+     first). Set it when you can judge; omit it otherwise (invalid values are ignored).
    - One line of `what`; a ready `search` query. Do NOT teach or explain.
    - Only list concepts genuinely present in the code. No speculative curriculum.
 

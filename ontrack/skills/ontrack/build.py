@@ -40,6 +40,7 @@ EXT_LANG = {
 
 
 CONCEPT_CONF = {"inferred", "possible"}
+LEVELS = {"basic", "intermediate", "advanced"}
 
 
 def _slug(s):
@@ -97,7 +98,7 @@ def _load_concepts(root, confirmed_ids):
                     where.append(w)
         if conf == "inferred" and not where:
             continue
-        out.append({
+        item = {
             "id": cid,
             "name": c.get("name") or cid,
             "kind": "concept",
@@ -107,7 +108,12 @@ def _load_concepts(root, confirmed_ids):
             "where": where,
             "search": c.get("search") or c.get("name") or cid,
             "from": c.get("from", []),
-        })
+        }
+        # Optional learning difficulty, used only to order the dashboard's Learning
+        # path (basic before advanced). Invalid/absent values are simply omitted.
+        if c.get("level") in LEVELS:
+            item["level"] = c["level"]
+        out.append(item)
     return out
 
 
