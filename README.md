@@ -34,30 +34,6 @@ To hack on it locally without installing, load the plugin directly:
 claude --plugin-dir ./ontrack
 ```
 
-## Codex local use
-
-Codex can use the same `.ontrack/` data format through the local wrapper (commands
-work as-is on Windows, macOS, and Linux):
-
-```
-python codex/ontrack.py snapshot
-```
-
-Then Codex writes code-backed concepts to `.ontrack/concepts.json`, rebuilds:
-
-```
-python codex/ontrack.py build
-```
-
-and can start the dashboard when you want to mark statuses. `serve` blocks; add
-`--background` to run it detached (logs to `.ontrack/server.out` / `server.err`):
-
-```
-python codex/ontrack.py serve --background
-```
-
-See [AGENTS.md](AGENTS.md) for the Codex workflow.
-
 ## How it works
 
 1. A Claude Code **`SessionEnd` hook** appends plain observations (deps and file

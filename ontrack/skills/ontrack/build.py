@@ -35,7 +35,7 @@ EXT_LANG = {
     "c":    ("c", "C", "Low-level systems language", "c programming tutorial"),
     "html": ("html", "HTML", "Markup for web pages", "html tutorial"),
     "css":  ("css", "CSS", "Styling for web pages", "css tutorial"),
-    "scss": ("sass", "Sass", "CSS with variables and nesting", "sass scss tutorial"),
+    "s css": ("sass", "Sass", "CSS with variables and nesting", "sass scss tutorial"),
 }
 
 

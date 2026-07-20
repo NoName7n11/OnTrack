@@ -1,10 +1,6 @@
 # OnTrack private per-user state — never commit (see PLAN.md)
 .ontrack/personal.json
 
-# OnTrack dashboard logs from `ontrack.py serve --background` (runtime only)
-.ontrack/server.out
-.ontrack/server.err
-
 # Local-only contributor change log
 PROGRESS.md
 
@@ -28,3 +24,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# MCP tool droppings (screenshots, console logs) — runtime only
+.playwright-mcp/
