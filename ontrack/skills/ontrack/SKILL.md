@@ -1,29 +1,33 @@
 ---
 name: ontrack
-description: Show what this project uses so you know what to learn. Regenerates the OnTrack inventory from tracked evidence (validated against the current repo) and displays it. Trigger on "/ontrack", "what does this project use", "what should I learn here", "ontrack".
+description: Turn what this project is built on into a study path. Regenerates the OnTrack inventory + concepts from tracked evidence, authors one assessment question per concept, and serves a dashboard where the user declares their level, answers, and gets a learning path. Trigger on "/ontrack", "what does this project use", "what should I learn here", "ontrack".
 ---
 
 # /ontrack
 
-Surface what the project uses so the user can spot what they don't know and go
-learn it. OnTrack reports **what exists + what to search for** — it does NOT teach,
-and it does NOT claim to know what the user already knows. See `PLAN.md`.
+Turn the project into a **study path**: surface what it's built on, ask the user a
+few questions to gauge what they know, and hand back what to learn (grouped by
+domain, ordered). OnTrack **points**; it does NOT teach, and it does NOT claim to
+know what the user knows — it asks. See `PLAN.md`.
 
 ## Steps
 
-1. Refresh the deterministic inventory first, so confirmed parent IDs are current:
+1. Refresh the deterministic inventory first, so confirmed parent IDs are current
+   (this also validates any existing `questions.json` and advances the session
+   cursor in `.ontrack/state.json`):
    ```
    python "${CLAUDE_PLUGIN_ROOT}/skills/ontrack/build.py"
    ```
+   Optional cost hint: `.ontrack/state.json`'s `last_processed_session` marks the
+   last session already interpreted. Sessions after it in `evidence.jsonl` (look
+   for `{"type":"session",...}` markers) are new — focus your file reading there.
 
-2. **Concept-inference pass (you, the model, do this).** Look at the confirmed
-   libraries/languages the project uses by reading the refreshed
-   `.ontrack/inventory.json`, then read a sample of the project's own source
-   files (skip `node_modules`, `.venv`, build output, `.ontrack`). For each
-   confirmed library/language, identify the **specific concepts actually used in
-   this code** — e.g. under React: `useEffect`, `useState`, JSX, props, conditional
-   rendering; under a JWT dep: token signing, refresh flow. Write them to
-   `.ontrack/concepts.json`:
+2. **Concept-inference pass (you, the model, do this).** Read the refreshed
+   `.ontrack/inventory.json`, then a sample of the project's own source files
+   (skip `node_modules`, `.venv`, build output, `.ontrack`). For each confirmed
+   library/language, identify the **specific concepts actually used in this code**
+   — under React: `useEffect`, JSX, props; under a JWT dep: token signing, refresh
+   flow. Write them to `.ontrack/concepts.json`:
    ```json
    { "concepts": [
      { "id": "concept:react/useeffect", "name": "useEffect",
@@ -34,51 +38,79 @@ and it does NOT claim to know what the user already knows. See `PLAN.md`.
    ```
    Rules — this is where honesty is enforced:
    - `id` = `concept:<parent-slug>/<concept-slug>`. `parent` MUST be the `id` of a
-     confirmed inventory item (`library:*` / `language:*`); a concept with no
-     confirmed parent is dropped by `build.py`.
+     confirmed inventory item; a concept with no confirmed parent is dropped.
    - `confidence: "inferred"` only when you can point at real code (`where` =
-     `file:line`). Use `confidence: "possible"` for a weak/ambient guess with no
-     concrete line — these are hidden on the dashboard by default.
-   - `where` paths are **repo-relative and use forward slashes** (`src/App.tsx:14`,
-     not `C:\...` or `\`-separated). `build.py` drops any `where` path that resolves
-     outside the repo, and drops an `inferred` concept left with no valid `where`.
-   - Optional `level`: `"basic"` | `"intermediate"` | `"advanced"` — the concept's
-     learning difficulty. The dashboard orders the Learning path by it (basics
-     first). Set it when you can judge; omit it otherwise (invalid values are ignored).
-   - One line of `what`; a ready `search` query. Do NOT teach or explain.
-   - Only list concepts genuinely present in the code. No speculative curriculum.
+     `file:line`). `confidence: "possible"` for a weak guess with no concrete line.
+   - `where` paths are **repo-relative, forward slashes** (`src/App.tsx:14`).
+     `build.py` drops paths outside the repo and drops an `inferred` concept left
+     with no valid `where`.
+   - Optional `level`: `"basic"` | `"intermediate"` | `"advanced"`.
+   - One line of `what`; a ready `search` query. Do NOT teach.
 
-3. Regenerate the inventory again (merges confirmed evidence + your concepts, each
-   validated against the current repo):
+3. **Question-authoring pass (you, the model, do this).** Load any existing
+   `.ontrack/questions.json` and **keep every question already there** (answered
+   ones must survive). For each concept in the inventory that does **not** yet have
+   a question, author exactly one and append it. Write `.ontrack/questions.json`:
+   ```json
+   { "questions": [
+     { "id": "q:react/useeffect", "concept": "concept:react/useeffect",
+       "domain": "framework", "mode": "graded", "level": "basic",
+       "prompt": "What does useEffect do?",
+       "options": ["Runs side effects after render", "Styles a component", "Defines a route"],
+       "answer": 0 },
+     { "id": "q:auth/jwt", "concept": "concept:auth/jwt",
+       "domain": "security", "mode": "self_report", "level": "intermediate",
+       "prompt": "How comfortable are you with where JWTs are stored and why?",
+       "options": ["Confident", "Shaky", "New"] }
+   ] }
+   ```
+   Rules:
+   - `concept` MUST be a real inventory `id` (orphans are dropped by `build.py`).
+   - `domain` ∈ `language | framework | system-design | security | tooling` — this
+     is what the learning path buckets by. Pick the truest fit for the concept.
+   - `mode`:
+     - `graded` for a concept with a **clean, checkable answer** (a language
+       feature, an API's behaviour). Give 3 plausible `options` and an integer
+       `answer` index (0-based) of the correct one. Keep distractors fair, not
+       trick questions.
+     - `self_report` for a **judgment** concept (system design, security posture)
+       where "correct" is situational. Use the options `["Confident","Shaky","New"]`
+       (the dashboard maps Confident→Learned, Shaky→Review, New→Learn). No `answer`.
+   - Optional `level` orders the path within a domain (basics first).
+   - **Incremental**: never rewrite or re-order an existing question, and never add
+     a second question for a concept that already has one.
+   - You author the answer key here, but it never reaches the browser — the server
+     strips `answer` before serving and grades server-side.
+
+4. Regenerate once more (merges concepts, validates the questions you authored,
+   advances the cursor):
    ```
    python "${CLAUDE_PLUGIN_ROOT}/skills/ontrack/build.py"
    ```
-   This rewrites `.ontrack/inventory.json` (only if changed). Stale evidence
-   (removed deps, deleted file types) and orphaned concepts (parent gone) drop
-   out automatically.
+   Stale evidence, orphaned concepts, and invalid/orphaned questions drop out.
 
-4. Start the dashboard server **in the background** (it blocks while serving):
+5. Start the dashboard server **in the background** (it blocks while serving):
    ```
    python "${CLAUDE_PLUGIN_ROOT}/skills/ontrack/server.py"
    ```
-   It binds `127.0.0.1` and prints the URL (default
-   `http://localhost:3874`, incrementing if the port is busy).
+   Binds `127.0.0.1`, prints the URL (default `http://localhost:3874`).
 
-5. Tell the user to open that URL. On the dashboard they mark each item's status
-   (Known / Somewhat / To learn / Ignore); items sort into **To Review /
-   Learning / Learned / Ignored**, with concepts nested under their library.
-   `possible` concepts are hidden until the user ticks "show possible". Marks save
-   to `.ontrack/personal.json`.
+6. Tell the user to open that URL. There they **declare their level** once, then
+   answer the questions; correct/Confident answers drop out, wrong/Shaky/New ones
+   flow into the **Learning path**, grouped by domain and ordered. Answers save to
+   `.ontrack/personal.json`. After more coding, run `/ontrack` again — new concepts
+   get new questions; already-answered ones are left alone.
 
-You may also give a quick text summary of the inventory, but the dashboard is the
-primary view. Do not explain or teach the technologies — the point is the user
-decides what they don't know and learns it elsewhere.
+Do not explain or teach the technologies in chat — the dashboard is the view, and
+the user learns the path elsewhere.
 
 ## Boundaries
 
-- Never hand-edit `inventory.json` — it is derived; rerun `build.py` instead.
-- `concepts.json` is your inference output; `build.py` validates and merges it.
-  Confirmed items always win over a concept on id collision.
-- The server writes only `.ontrack/personal.json`; `inventory.json` is read-only to it.
-- Confidence is honest by construction: `confirmed` = deterministic evidence,
-  `inferred` = code-backed concept, `possible` = weak guess (hidden by default).
+- Never hand-edit `inventory.json` — it is derived; rerun `build.py`.
+- `concepts.json` and `questions.json` are your authoring output; `build.py`
+  validates them against the current inventory (drops orphans/invalid).
+- The server writes only `.ontrack/personal.json`; everything else is read-only to
+  it, and the graded `answer` key is stripped before questions reach the browser.
+- Confidence stays honest: `confirmed` = deterministic evidence, `inferred` =
+  code-backed concept, `possible` = weak guess.
+- Knowledge state comes only from the user's answers — OnTrack never guesses it.

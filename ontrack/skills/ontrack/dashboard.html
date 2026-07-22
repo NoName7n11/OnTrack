@@ -3,226 +3,298 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OnTrack — what this project uses</title>
+<title>OnTrack — what this project taught you to build</title>
 <style>
-  :root { color-scheme: light dark; }
-  * { box-sizing: border-box; }
-  body { margin: 0; font: 15px/1.5 system-ui, sans-serif;
-         background: #14161a; color: #e7e9ee; }
-  header { padding: 20px 24px; border-bottom: 1px solid #2a2e37; }
-  h1 { margin: 0; font-size: 20px; }
-  .sub { color: #9aa1ad; font-size: 13px; margin-top: 4px; }
-  main { padding: 16px 24px 60px; max-width: 900px; margin: 0 auto; }
-  .section { margin-top: 26px; }
-  .section h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .06em;
-                color: #9aa1ad; margin: 0 0 10px; }
-  .section.review h2  { color: #f0a35e; }
-  .section.learning h2{ color: #6cb6ff; }
-  .section.learned h2 { color: #5fd08a; }
-  .section.ignored h2 { color: #7b818c; }
-  .empty { color: #6b7280; font-size: 13px; font-style: italic; }
-  .card { background: #1b1e24; border: 1px solid #2a2e37; border-radius: 10px;
-          padding: 12px 14px; margin-bottom: 10px; }
-  .card.child { margin-left: 22px; border-left: 2px solid #3a3f4b; }
-  .row { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
-  .name { font-weight: 600; }
-  .kind { font-size: 11px; color: #9aa1ad; text-transform: uppercase; letter-spacing: .04em; }
-  .conf { font-size: 10px; padding: 1px 6px; border-radius: 999px; margin-left: 6px;
-          text-transform: uppercase; letter-spacing: .04em; }
-  .conf.inferred { background: #2b2f3a; color: #9db4d8; }
-  .conf.possible { background: #332b2b; color: #d8a99d; }
-  .toggle { font-size: 12.5px; color: #9aa1ad; margin-top: 8px; display: inline-flex;
-            align-items: center; gap: 6px; cursor: pointer; }
-  .what { color: #c3c8d2; font-size: 13.5px; margin: 4px 0 6px; }
-  .meta { font-size: 12.5px; color: #9aa1ad; }
-  .meta a { color: #6cb6ff; text-decoration: none; }
-  .meta a:hover { text-decoration: underline; }
-  .where { font-family: ui-monospace, monospace; font-size: 12px; color: #8a919c; }
-  .radios { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
-  .radios label { font-size: 12.5px; padding: 3px 9px; border: 1px solid #3a3f4b;
-                  border-radius: 999px; cursor: pointer; user-select: none; color: #c3c8d2; }
-  .radios input { display: none; }
-  .radios label.on { background: #2b3140; border-color: #6cb6ff; color: #fff; }
-  .badge { font-size: 11px; color: #6b7280; }
-  .step { display: inline-block; min-width: 20px; color: #6cb6ff; font-weight: 700;
-          margin-right: 8px; }
-  .level { font-size: 10px; padding: 1px 6px; border-radius: 999px; margin-left: 6px;
-           background: #23262e; color: #9aa1ad; text-transform: uppercase; letter-spacing: .04em; }
-  .path-hint { font-size: 12px; color: #6cb6ff; margin: -4px 0 10px; }
+  :root {
+    --paper:#f7f6f3; --raise:#fff; --ink:#1b1f1d; --muted:#5c665f; --faint:#8a938c;
+    --line:#e2e0d8; --line2:#cfcdc2; --accent:#0f7a6b; --accent-soft:#e3f0ec;
+    --tolearn:#2f6fb0; --somewhat:#b9781a; --code:#f1f0eb;
+    --mono:ui-monospace,"SFMono-Regular","Menlo","Consolas",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper:#131614; --raise:#1b1f1c; --ink:#eaebe6; --muted:#a3aca4;
+      --faint:#727c74; --line:#2a2f2b; --line2:#3a403a; --accent:#43b7a2;
+      --accent-soft:#163029; --tolearn:#5e9ad8; --somewhat:#d3982f; --code:#1e2320; }
+  }
+  :root[data-theme="light"] { --paper:#f7f6f3; --raise:#fff; --ink:#1b1f1d; --muted:#5c665f;
+    --faint:#8a938c; --line:#e2e0d8; --line2:#cfcdc2; --accent:#0f7a6b; --accent-soft:#e3f0ec;
+    --tolearn:#2f6fb0; --somewhat:#b9781a; --code:#f1f0eb; }
+  :root[data-theme="dark"] { --paper:#131614; --raise:#1b1f1c; --ink:#eaebe6; --muted:#a3aca4;
+    --faint:#727c74; --line:#2a2f2b; --line2:#3a403a; --accent:#43b7a2; --accent-soft:#163029;
+    --tolearn:#5e9ad8; --somewhat:#d3982f; --code:#1e2320; }
+
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink);
+         font:16px/1.6 var(--sans); -webkit-font-smoothing:antialiased; }
+  header { border-bottom:1px solid var(--line); padding:28px 24px; }
+  .wrap { max-width:860px; margin:0 auto; }
+  h1 { font-family:var(--mono); font-size:22px; font-weight:600; margin:0; letter-spacing:-.01em; }
+  .sub { color:var(--muted); font-size:14px; margin-top:6px; max-width:60ch; }
+  main { padding:8px 24px 80px; }
+  .empty { color:var(--faint); font-size:13.5px; font-style:italic; }
+
+  .kicker { font-family:var(--mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+            color:var(--faint); margin:32px 0 4px; display:flex; align-items:center; gap:10px; }
+  .kicker .n { color:var(--accent); }
+  h2 { font-family:var(--mono); font-size:19px; font-weight:600; margin:0 0 14px; letter-spacing:-.01em; }
+
+  /* intake */
+  .intake { background:var(--raise); border:1px solid var(--line); border-radius:10px; padding:20px; margin-top:20px; }
+  .intake p { margin:0 0 14px; color:var(--muted); font-size:14.5px; }
+  .levels { display:flex; flex-wrap:wrap; gap:10px; }
+  .levels button { flex:1 1 160px; font:inherit; text-align:left; cursor:pointer;
+    background:var(--paper); border:1px solid var(--line2); border-radius:8px; padding:12px 14px; color:var(--ink); }
+  .levels button:hover { border-color:var(--accent); }
+  .levels button.on { border-color:var(--accent); background:var(--accent-soft); }
+  .levels b { display:block; font-size:14.5px; }
+  .levels small { color:var(--faint); font-size:12.5px; }
+
+  /* question cards */
+  .qcard { background:var(--raise); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:12px; }
+  .badges { display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap; }
+  .badge { font-family:var(--mono); font-size:11px; letter-spacing:.04em; padding:2px 8px;
+           border-radius:3px; border:1px solid currentColor; font-weight:600; }
+  .b-dom { color:var(--tolearn); } .b-mode { color:var(--accent); } .b-sr { color:var(--faint); }
+  .b-sec { color:var(--somewhat); }
+  .qp { font-weight:600; font-size:15.5px; margin:0 0 10px; }
+  .opts { display:flex; flex-direction:column; gap:7px; }
+  .opt { display:flex; align-items:center; gap:9px; padding:8px 11px; border:1px solid var(--line2);
+         border-radius:7px; cursor:pointer; font-size:14px; color:var(--ink); background:var(--paper); }
+  .opt:hover { border-color:var(--accent); }
+  .opt .r { width:14px; height:14px; border-radius:50%; border:1.5px solid var(--line2); flex:none; }
+  .opt.sel { border-color:var(--accent); background:var(--accent-soft); }
+  .opt.sel .r { border-color:var(--accent); background:radial-gradient(var(--accent) 0 4px, transparent 5px); }
+  .note { margin-top:10px; width:100%; font:13px var(--mono); color:var(--ink); background:var(--paper);
+          border:1px dashed var(--line2); border-radius:6px; padding:8px 10px; resize:vertical; }
+  .qsend { margin-top:10px; font:inherit; font-size:13.5px; cursor:pointer; color:#fff; background:var(--accent);
+           border:none; border-radius:6px; padding:7px 16px; }
+  .qsend:disabled { opacity:.45; cursor:not-allowed; }
+
+  /* learning path */
+  .bucket { margin-bottom:20px; }
+  .bh { font-family:var(--mono); font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+        color:var(--accent); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+  .bh::after { content:""; flex:1; height:1px; background:var(--line); }
+  .pstep { display:grid; grid-template-columns:auto 1fr; gap:12px; padding:9px 0; border-bottom:1px solid var(--line); align-items:baseline; }
+  .pstep:last-child { border-bottom:none; }
+  .pn { font-family:var(--mono); font-size:13px; color:var(--faint); font-weight:700; }
+  .pt { font-size:15px; font-weight:600; }
+  .review-tag { font-family:var(--mono); font-size:10px; color:var(--somewhat); border:1px solid var(--somewhat);
+                border-radius:3px; padding:0 5px; margin-left:8px; letter-spacing:.04em; vertical-align:1px; }
+  .pwhat { color:var(--muted); font-size:13.5px; font-weight:400; margin-top:2px; }
+  .pmeta { font-size:12.5px; margin-top:3px; display:flex; gap:10px; flex-wrap:wrap; }
+  .pmeta .where { font-family:var(--mono); color:var(--faint); }
+  .pmeta a { color:var(--accent); text-decoration:none; }
+  .pmeta a:hover { text-decoration:underline; }
+  .done { color:var(--faint); font-size:13px; margin-top:6px; }
 </style>
 </head>
 <body>
 <header>
-  <h1>OnTrack</h1>
-  <div class="sub">What this project uses. Mark what you know — go learn the rest. OnTrack points; it doesn't teach.</div>
-  <label class="toggle"><input type="checkbox" id="showPossible"> show possible (weak-signal) concepts</label>
+  <div class="wrap">
+    <h1>OnTrack</h1>
+    <div class="sub">Answer a few questions about what this project is built on. OnTrack turns the gaps into a study path — it points you at what to learn, it doesn't teach it.</div>
+  </div>
 </header>
-<main id="app"><div class="empty">Loading…</div></main>
+<main class="wrap" id="app"><div class="empty">Loading…</div></main>
 
 <script>
-const STATUSES = [
-  ["known", "Known"], ["somewhat", "Somewhat"],
-  ["to_learn", "To learn"], ["ignored", "Ignore"],
+const LEVELS = [
+  ["beginner", "Beginner", "New to most of this — walk me through the basics too."],
+  ["intermediate", "Intermediate", "Comfortable with the fundamentals; focus me on the newer parts."],
+  ["senior", "Senior", "Experienced — only surface what I actually got wrong."],
 ];
-// status -> section key
-function sectionOf(status) {
-  if (status === "known") return "learned";
-  if (status === "somewhat" || status === "to_learn") return "learning";
-  if (status === "ignored") return "ignored";
-  return "review"; // unanswered
-}
-const SECTIONS = [
-  ["review", "To Review"], ["learning", "Learning"],
-  ["learned", "Learned"], ["ignored", "Ignored"],
-];
-// Roadmap ordering: basic before advanced; unset difficulty sits in the middle.
-const LEVEL_ORDER = { basic: 0, intermediate: 1, advanced: 2 };
-function levelRank(i) { return LEVEL_ORDER[i.level] ?? 1; }
-function byOrder(a, b) {
-  return levelRank(a) - levelRank(b) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-}
+const DOMAIN_ORDER = ["language", "framework", "system-design", "security", "tooling"];
+const DOMAIN_LABEL = { "language":"Language", "framework":"Framework",
+  "system-design":"System design", "security":"Security", "tooling":"Tooling" };
+const LEVEL_ORDER = { basic:0, intermediate:1, advanced:2 };
+// self_report label -> knowledge state
+const SELF_STATE = { "Confident":"learned", "Shaky":"review", "New":"learn" };
 
 let inventory = { items: [] };
-let status = {}; // id -> status
-let showPossible = false;
+let questions = [];
+let personal = { answers: {} };
+let invById = {};
 
 async function load() {
-  const [inv, pers] = await Promise.all([
+  const [inv, qs, pers] = await Promise.all([
     fetch("/inventory.json").then(r => r.json()),
+    fetch("/questions.json").then(r => r.json()),
     fetch("/personal.json").then(r => r.json()),
   ]);
-  inventory = inv;
-  status = (pers && pers.status) || {};
+  inventory = inv || { items: [] };
+  questions = (qs && qs.questions) || [];
+  personal = pers && typeof pers === "object" ? pers : {};
+  personal.answers = personal.answers || {};
+  invById = Object.fromEntries((inventory.items || []).map(i => [i.id, i]));
   render();
 }
 
-async function setStatus(id, value) {
-  const previous = status[id];
-  status[id] = value; // optimistic
-  render();
+async function postJSON(path, body) {
+  const res = await fetch(path, { method:"POST",
+    headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
+  if (!res.ok) { let m="save failed"; try { m=(await res.json()).error||m; } catch(e){} throw new Error(m); }
+  return res.json();
+}
+
+async function setLevel(level) {
+  const prev = personal.level;
+  personal.level = level; render();          // optimistic
+  try { await postJSON("/level", { level }); }
+  catch (e) { personal.level = prev; render(); alert(e.message); }
+}
+
+async function submitAnswer(q, payload) {
   try {
-    const res = await fetch("/status", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, status: value }),
-    });
-    if (!res.ok) {
-      if (previous === undefined) delete status[id]; else status[id] = previous;
-      render();
-      alert("Failed to save status");
-    }
-  } catch (err) {
-    if (previous === undefined) delete status[id]; else status[id] = previous;
+    // The server grades (it holds the answer key) and returns the authoritative
+    // answers map — trust that rather than guessing correctness on the client.
+    const res = await postJSON("/answer", Object.assign({ question_id: q.id }, payload));
+    if (res && res.answers) personal.answers = res.answers;
     render();
-    alert("Failed to save status");
+  } catch (e) { alert(e.message); }
+}
+
+// knowledge state for one answered question
+function stateOf(q) {
+  const a = personal.answers[q.id];
+  if (!a) return "unanswered";
+  if (q.mode === "graded") return a.correct ? "learned" : "learn";
+  return SELF_STATE[a.self] || "review";
+}
+
+function ytLink(s) { return "https://www.youtube.com/results?search_query=" + encodeURIComponent(s); }
+function el(tag, cls, txt) { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+
+function intakeCard() {
+  const box = el("div", "intake");
+  box.appendChild(el("p", null, "First — where are you at overall? This only changes how much detail the path shows; you still answer every question."));
+  const row = el("div", "levels");
+  for (const [val, label, desc] of LEVELS) {
+    const b = el("button", personal.level === val ? "on" : null);
+    b.appendChild(el("b", null, label));
+    b.appendChild(el("small", null, desc));
+    b.addEventListener("click", () => setLevel(val));
+    row.appendChild(b);
   }
+  box.appendChild(row);
+  return box;
 }
 
-function ytLink(q) {
-  return "https://www.youtube.com/results?search_query=" + encodeURIComponent(q);
+function questionCard(q) {
+  const c = el("div", "qcard");
+  const badges = el("div", "badges");
+  badges.appendChild(el("span", "badge b-dom", q.domain));
+  badges.appendChild(el("span", "badge " + (q.mode === "graded" ? "b-mode" : "b-sr"),
+    q.mode === "graded" ? "graded" : "self-report"));
+  c.appendChild(badges);
+  c.appendChild(el("p", "qp", q.prompt));
+
+  const opts = el("div", "opts");
+  let picked = null;
+  const optEls = [];
+  (q.options || []).forEach((label, i) => {
+    const o = el("div", "opt");
+    o.appendChild(el("span", "r"));
+    o.appendChild(el("span", null, label));
+    o.addEventListener("click", () => {
+      picked = i; optEls.forEach((x, j) => x.classList.toggle("sel", j === i));
+      send.disabled = false;
+    });
+    optEls.push(o); opts.appendChild(o);
+  });
+  c.appendChild(opts);
+
+  let noteEl = null;
+  if (q.mode === "self_report") {
+    noteEl = el("textarea", "note"); noteEl.rows = 2;
+    noteEl.placeholder = "optional: what specifically is fuzzy?";
+    c.appendChild(noteEl);
+  }
+  const send = el("button", "qsend", "Save answer"); send.disabled = true;
+  send.addEventListener("click", () => {
+    if (picked == null) return;
+    if (q.mode === "graded") submitAnswer(q, { choice: picked });
+    else submitAnswer(q, { self: q.options[picked], note: noteEl && noteEl.value.trim() });
+  });
+  c.appendChild(send);
+  return c;
 }
 
-function card(item, step) {
-  const el = document.createElement("div");
-  el.className = "card" + (item.parent ? " child" : "");
+function pathStep(q, n) {
+  const item = invById[q.concept] || {};
+  const wrap = el("div", "pstep");
+  wrap.appendChild(el("span", "pn", n + "."));
+  const body = el("div");
+  const t = el("div", "pt", item.name || q.concept);
+  if (stateOf(q) === "review") t.appendChild(el("span", "review-tag", "review"));
+  body.appendChild(t);
+  if (item.what) body.appendChild(el("div", "pwhat", item.what));
+  const meta = el("div", "pmeta");
   const where = (item.where || []).join(", ");
-  el.innerHTML = `
-    <div class="row"><span class="name"></span><span class="kind"></span></div>
-    <div class="what"></div>
-    <div class="meta">
-      <span class="where"></span>
-      ${where ? " · " : ""}<a target="_blank" rel="noopener"></a>
-    </div>
-    <div class="radios"></div>`;
-  const nameEl = el.querySelector(".name");
-  if (step != null) {
-    const s = document.createElement("span");
-    s.className = "step";
-    s.textContent = step + ".";
-    nameEl.before(s);
-  }
-  nameEl.textContent = item.name;
-  if (item.level) {
-    const lv = document.createElement("span");
-    lv.className = "level";
-    lv.textContent = item.level;
-    nameEl.after(lv);
-  }
-  el.querySelector(".kind").textContent = item.kind || "";
-  if (item.confidence === "inferred" || item.confidence === "possible") {
-    const c = document.createElement("span");
-    c.className = "conf " + item.confidence;
-    c.textContent = item.confidence;
-    el.querySelector(".kind").after(c);
-  }
-  el.querySelector(".what").textContent = item.what || "";
-  el.querySelector(".where").textContent = where;
-  const a = el.querySelector("a");
-  a.href = ytLink(item.search || item.name);
-  a.textContent = "search: " + (item.search || item.name);
-  const radios = el.querySelector(".radios");
-  const cur = status[item.id];
-  for (const [val, label] of STATUSES) {
-    const lab = document.createElement("label");
-    lab.className = cur === val ? "on" : "";
-    lab.innerHTML = `<input type="radio" name="s_${item.id}" value="${val}">${label}`;
-    lab.querySelector("input").checked = cur === val;
-    lab.querySelector("input").addEventListener("change", () => setStatus(item.id, val));
-    radios.appendChild(lab);
-  }
-  return el;
+  if (where) meta.appendChild(el("span", "where", where));
+  const a = el("a", null, "search ›"); a.href = ytLink(item.search || item.name || q.concept);
+  a.target = "_blank"; a.rel = "noopener"; meta.appendChild(a);
+  body.appendChild(meta);
+  wrap.appendChild(body);
+  return wrap;
 }
 
 function render() {
   const app = document.getElementById("app");
   app.innerHTML = "";
-  // group items by section; keep children next to their parent within a section
-  const buckets = { review: [], learning: [], learned: [], ignored: [] };
-  const visible = inventory.items.filter(
-    i => showPossible || i.confidence !== "possible");
-  for (const item of visible) buckets[sectionOf(status[item.id])].push(item);
 
-  for (const [key, title] of SECTIONS) {
-    const items = buckets[key];
-    const sec = document.createElement("section");
-    sec.className = "section " + key;
-    const count = items.length;
-    sec.innerHTML = `<h2>${title} <span class="badge">${count}</span></h2>`;
-    if (!count) {
-      const e = document.createElement("div");
-      e.className = "empty";
-      e.textContent = "nothing here";
-      sec.appendChild(e);
-    } else {
-      // Learning is a study path: number it, basics before advanced.
-      const numbered = key === "learning";
-      if (numbered) {
-        const hint = document.createElement("div");
-        hint.className = "path-hint";
-        hint.textContent = "Study in this order — foundations first:";
-        sec.appendChild(hint);
-      }
-      let step = 0;
-      const emit = (item) => { step += 1; sec.appendChild(card(item, numbered ? step : null)); };
-      // parents first (id order), each followed by its children sorted by level
-      const parents = items.filter(i => !i.parent).sort(byOrder);
-      const children = items.filter(i => i.parent);
-      const placed = new Set();
-      for (const p of parents) {
-        emit(p); placed.add(p.id);
-        for (const c of children.filter(c => c.parent === p.id).sort(byOrder)) {
-          emit(c); placed.add(c.id);
-        }
-      }
-      for (const c of children.slice().sort(byOrder)) if (!placed.has(c.id)) emit(c);
-    }
-    app.appendChild(sec);
+  // gate on intake level
+  if (!personal.level) {
+    const k = el("div", "kicker"); k.appendChild(el("span", null, "Start here"));
+    app.appendChild(k);
+    app.appendChild(el("h2", null, "Set your level"));
+    app.appendChild(intakeCard());
+    return;
+  }
+
+  // change-level affordance stays available but quiet
+  const lk = el("div", "kicker");
+  lk.appendChild(el("span", "n", "01"));
+  lk.appendChild(el("span", null, "Questions"));
+  app.appendChild(lk);
+  app.appendChild(el("h2", null, "What did this project use?"));
+
+  const unanswered = questions.filter(q => !personal.answers[q.id]);
+  if (!unanswered.length) {
+    app.appendChild(el("div", "done", questions.length
+      ? "All caught up — every question answered. Run /ontrack again after more work to surface new ones."
+      : "No questions yet. Run /ontrack to scan the project and generate them."));
+  } else {
+    for (const q of unanswered) app.appendChild(questionCard(q));
+  }
+
+  // learning path — grouped by domain, in-path = learn|review
+  const pk = el("div", "kicker");
+  pk.appendChild(el("span", "n", "02"));
+  pk.appendChild(el("span", null, "Learning path"));
+  app.appendChild(pk);
+  app.appendChild(el("h2", null, "What to go learn, in order"));
+
+  const inPath = questions.filter(q => ["learn", "review"].includes(stateOf(q)));
+  if (!inPath.length) {
+    app.appendChild(el("div", "empty", "Nothing to learn yet — answer the questions above and gaps show up here."));
+    return;
+  }
+  const byDomain = {};
+  for (const q of inPath) (byDomain[q.domain] = byDomain[q.domain] || []).push(q);
+  const domains = Object.keys(byDomain).sort(
+    (a, b) => DOMAIN_ORDER.indexOf(a) - DOMAIN_ORDER.indexOf(b));
+  for (const dom of domains) {
+    const group = byDomain[dom].sort((a, b) =>
+      (LEVEL_ORDER[a.level] ?? 1) - (LEVEL_ORDER[b.level] ?? 1) ||
+      (a.concept < b.concept ? -1 : 1));
+    const bucket = el("div", "bucket");
+    bucket.appendChild(el("div", "bh", DOMAIN_LABEL[dom] || dom));
+    group.forEach((q, i) => bucket.appendChild(pathStep(q, i + 1)));
+    app.appendChild(bucket);
   }
 }
-
-document.getElementById("showPossible").addEventListener("change", (e) => {
-  showPossible = e.target.checked;
-  render();
-});
 
 load();
 </script>

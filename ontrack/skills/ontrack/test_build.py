@@ -131,6 +131,91 @@ def test_concept_merge():
     print("ok: concepts merged, orphans/bad-confidence dropped, missing where pruned")
 
 
+def test_validate_questions():
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        (root / ".ontrack").mkdir()
+        inv_ids = {"concept:react/useeffect", "concept:auth/jwt"}
+        (root / ".ontrack" / "questions.json").write_text(json.dumps({"questions": [
+            # valid graded: answer index in range, level kept
+            {"id": "q:react/useeffect", "concept": "concept:react/useeffect",
+             "domain": "framework", "mode": "graded", "level": "basic",
+             "prompt": "What does useEffect do?",
+             "options": ["Runs after render", "Styles", "Routes"], "answer": 0},
+            # valid self_report: no answer needed
+            {"id": "q:auth/jwt", "concept": "concept:auth/jwt",
+             "domain": "security", "mode": "self_report",
+             "prompt": "Comfortable with JWT storage?",
+             "options": ["Confident", "Shaky", "New"]},
+            # orphan: concept not in inventory -> dropped
+            {"id": "q:vue/ref", "concept": "concept:vue/ref", "domain": "framework",
+             "mode": "graded", "prompt": "?", "options": ["a", "b"], "answer": 0},
+            # graded with out-of-range answer -> dropped
+            {"id": "q:bad/answer", "concept": "concept:react/useeffect",
+             "domain": "framework", "mode": "graded", "prompt": "?",
+             "options": ["a", "b"], "answer": 5},
+            # graded missing answer -> dropped
+            {"id": "q:bad/noanswer", "concept": "concept:react/useeffect",
+             "domain": "framework", "mode": "graded", "prompt": "?",
+             "options": ["a", "b"]},
+            # bad domain -> dropped
+            {"id": "q:bad/domain", "concept": "concept:auth/jwt", "domain": "vibes",
+             "mode": "self_report", "prompt": "?", "options": ["a", "b"]},
+            # too few options -> dropped
+            {"id": "q:bad/opts", "concept": "concept:auth/jwt", "domain": "security",
+             "mode": "self_report", "prompt": "?", "options": ["only"]},
+            # bool answer must not pass as int
+            {"id": "q:bad/bool", "concept": "concept:react/useeffect",
+             "domain": "framework", "mode": "graded", "prompt": "?",
+             "options": ["a", "b"], "answer": True},
+            None, [],
+        ]}), encoding="utf-8")
+
+        qs = build.validate_questions(root, inv_ids)
+        by_id = {q["id"]: q for q in qs}
+        assert set(by_id) == {"q:react/useeffect", "q:auth/jwt"}, by_id
+        assert by_id["q:react/useeffect"]["answer"] == 0
+        assert by_id["q:react/useeffect"]["level"] == "basic"
+        assert "answer" not in by_id["q:auth/jwt"], "self_report has no answer key"
+        assert [q["id"] for q in qs] == sorted(q["id"] for q in qs), "id-sorted"
+
+        # write-only-if-changed
+        assert build.write_questions(root, qs) is True
+        assert build.write_questions(root, qs) is False
+
+        for bad in ("[]", "null", '{"questions": {}}'):
+            (root / ".ontrack" / "questions.json").write_text(bad, encoding="utf-8")
+            assert build.validate_questions(root, inv_ids) == [], bad
+
+    print("ok: questions validated (orphans/bad-answer/domain/options dropped)")
+
+
+def test_cursor():
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        (root / ".ontrack").mkdir()
+        # fresh clone: no state.json
+        assert build.read_cursor(root) is None
+        assert build.newest_session(root) is None
+
+        (root / ".ontrack" / "evidence.jsonl").write_text(
+            '{"type":"dependency","name":"react","source":"p","detected_at":"x"}\n'
+            '{"type":"session","id":"2026-07-20T10:00:00Z","detected_at":"2026-07-20T10:00:00Z"}\n'
+            '{"type":"file_extension","name":"tsx","source":"a","detected_at":"y"}\n'
+            '{"type":"session","id":"2026-07-21T10:00:00Z","detected_at":"2026-07-21T10:00:00Z"}\n')
+        assert build.newest_session(root) == "2026-07-21T10:00:00Z", "picks the latest marker"
+
+        build.write_cursor(root, build.newest_session(root))
+        assert build.read_cursor(root) == "2026-07-21T10:00:00Z"
+        # advancing to None is a no-op (nothing to process)
+        build.write_cursor(root, None)
+        assert build.read_cursor(root) == "2026-07-21T10:00:00Z"
+
+    print("ok: cursor reads/advances to newest session marker; fresh clone = None")
+
+
 if __name__ == "__main__":
     test_build_inventory()
     test_concept_merge()
+    test_validate_questions()
+    test_cursor()

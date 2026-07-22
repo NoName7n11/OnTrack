@@ -41,6 +41,8 @@ EXT_LANG = {
 
 CONCEPT_CONF = {"inferred", "possible"}
 LEVELS = {"basic", "intermediate", "advanced"}
+DOMAINS = {"language", "framework", "system-design", "security", "tooling"}
+MODES = {"graded", "self_report"}
 
 
 def _slug(s):
@@ -115,6 +117,125 @@ def _load_concepts(root, confirmed_ids):
             item["level"] = c["level"]
         out.append(item)
     return out
+
+
+def validate_questions(root, inventory_ids):
+    """Load LLM-authored questions.json, keep only valid ones (build step 5).
+
+    Questions are authored by the /ontrack skill (Claude) — one probe per concept.
+    build.py is deterministic: it never writes questions, only validates them
+    against the current inventory so the dashboard can trust the file.
+    - concept must be a current inventory id (orphans dropped, like concepts),
+    - mode ∈ graded|self_report, domain ∈ DOMAINS,
+    - options is a list of ≥2 labels,
+    - graded carries an int `answer` index within range; self_report has none,
+    - level ∈ LEVELS is optional (used only to order the path).
+    Duplicate ids keep the first. Stable order: sorted by id.
+    """
+    root = Path(root)
+    p = root / ".ontrack" / "questions.json"
+    if not p.exists():
+        return []
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(data, dict) or not isinstance(data.get("questions"), list):
+        return []
+
+    out, seen = [], set()
+    for q in data["questions"]:
+        if not isinstance(q, dict):
+            continue
+        qid = q.get("id")
+        concept = q.get("concept")
+        mode = q.get("mode")
+        domain = q.get("domain")
+        options = q.get("options")
+        if not qid or qid in seen:
+            continue
+        if concept not in inventory_ids:
+            continue
+        if mode not in MODES or domain not in DOMAINS:
+            continue
+        if not isinstance(options, list) or len(options) < 2:
+            continue
+        if not all(isinstance(o, str) and o for o in options):
+            continue
+        if not q.get("prompt"):
+            continue
+        item = {
+            "id": qid,
+            "concept": concept,
+            "domain": domain,
+            "mode": mode,
+            "prompt": q["prompt"],
+            "options": options,
+        }
+        if mode == "graded":
+            ans = q.get("answer")
+            if not isinstance(ans, int) or isinstance(ans, bool):
+                continue
+            if not (0 <= ans < len(options)):
+                continue
+            item["answer"] = ans
+        if q.get("level") in LEVELS:
+            item["level"] = q["level"]
+        seen.add(qid)
+        out.append(item)
+    return sorted(out, key=lambda x: x["id"])
+
+
+def write_questions(root, questions):
+    """Rewrite questions.json with the validated set, only if changed (anti-churn)."""
+    out = Path(root) / ".ontrack" / "questions.json"
+    out.parent.mkdir(exist_ok=True)
+    new = json.dumps({"questions": questions}, indent=2, ensure_ascii=False) + "\n"
+    if out.exists() and out.read_text(encoding="utf-8") == new:
+        return False
+    out.write_text(new, encoding="utf-8")
+    return True
+
+
+def newest_session(root):
+    """Latest `session` marker id in evidence.jsonl, or None if none written yet."""
+    ev = Path(root) / ".ontrack" / "evidence.jsonl"
+    if not ev.exists():
+        return None
+    latest = None
+    for line in ev.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            e = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if e.get("type") == "session" and e.get("id"):
+            if latest is None or e["id"] > latest:
+                latest = e["id"]
+    return latest
+
+
+def read_cursor(root):
+    """Return last_processed_session from state.json, or None (fresh clone)."""
+    p = Path(root) / ".ontrack" / "state.json"
+    if not p.exists():
+        return None
+    try:
+        return json.loads(p.read_text(encoding="utf-8")).get("last_processed_session")
+    except json.JSONDecodeError:
+        return None
+
+
+def write_cursor(root, session_id):
+    """Advance state.json's cursor to `session_id` (machine state, gitignored)."""
+    if not session_id:
+        return
+    p = Path(root) / ".ontrack" / "state.json"
+    p.parent.mkdir(exist_ok=True)
+    p.write_text(json.dumps({"last_processed_session": session_id},
+                            indent=2) + "\n", encoding="utf-8")
 
 
 def build_inventory(root):
@@ -206,7 +327,15 @@ def main():
     inv = build_inventory(root)
     changed = write_inventory(root, inv)
     state = "updated" if changed else "unchanged"
-    print(f"ontrack: inventory {state} - {len(inv['items'])} items", file=sys.stderr)
+
+    inventory_ids = {it["id"] for it in inv["items"]}
+    questions = validate_questions(root, inventory_ids)
+    q_changed = write_questions(root, questions)
+    write_cursor(root, newest_session(root))
+
+    print(f"ontrack: inventory {state} - {len(inv['items'])} items; "
+          f"questions {'updated' if q_changed else 'unchanged'} - {len(questions)}",
+          file=sys.stderr)
 
 
 if __name__ == "__main__":
