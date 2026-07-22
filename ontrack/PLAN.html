@@ -335,6 +335,7 @@
           <tr><td><span class="k">inventory.json</span></td><td>What the project uses now — evidence validated vs. current repo.</td><td><code>build.py</code></td><td><span class="badge b-conf">committed</span></td></tr>
           <tr><td><span class="k">questions.json</span></td><td>The assessment — one probe per concept, tied to a domain.</td><td><code>/ontrack</code> LLM</td><td><span class="badge b-conf">committed</span></td></tr>
           <tr><td><span class="k">personal.json</span></td><td>Your level + answers. The only file the dashboard writes.</td><td>Dashboard</td><td><span class="badge b-ignored">gitignored</span></td></tr>
+          <tr><td><span class="k">state.json</span></td><td>Not a data lifecycle — a one-value cursor: last session interpreted. Lets <code>/ontrack</code> resume.</td><td><code>/ontrack</code></td><td><span class="badge b-ignored">gitignored</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -342,7 +343,12 @@
       <div class="code">
         <div class="cap">evidence.jsonl — structured facts, hook-written</div>
 <pre><span class="tok-punc">{</span><span class="tok-key">"type"</span>:<span class="tok-str">"dependency"</span>,<span class="tok-key">"name"</span>:<span class="tok-str">"react"</span>,<span class="tok-key">"source"</span>:<span class="tok-str">"package.json"</span>,...<span class="tok-punc">}</span>
-<span class="tok-punc">{</span><span class="tok-key">"type"</span>:<span class="tok-str">"file_extension"</span>,<span class="tok-key">"name"</span>:<span class="tok-str">"tsx"</span>,<span class="tok-key">"source"</span>:<span class="tok-str">"src/App.tsx"</span>,...<span class="tok-punc">}</span></pre>
+<span class="tok-punc">{</span><span class="tok-key">"type"</span>:<span class="tok-str">"file_extension"</span>,<span class="tok-key">"name"</span>:<span class="tok-str">"tsx"</span>,<span class="tok-key">"source"</span>:<span class="tok-str">"src/App.tsx"</span>,...<span class="tok-punc">}</span>
+<span class="tok-punc">{</span><span class="tok-key">"type"</span>:<span class="tok-str">"session"</span>,<span class="tok-key">"id"</span>:<span class="tok-str">"2026-07-21T10:05:00Z"</span>,...<span class="tok-punc">}</span>  <span class="tok-punc">// boundary marker</span></pre>
+      </div>
+      <div class="code">
+        <div class="cap">state.json — processing cursor (gitignored)</div>
+<pre><span class="tok-punc">{</span> <span class="tok-key">"last_processed_session"</span>: <span class="tok-str">"2026-07-20T10:05:00Z"</span> <span class="tok-punc">}</span></pre>
       </div>
       <div class="code">
         <div class="cap">inventory.json — one concept, stable id + parent</div>
@@ -352,6 +358,39 @@
   <span class="tok-key">"what"</span>: <span class="tok-str">"Run side effects after render"</span>,
   <span class="tok-key">"where"</span>: [<span class="tok-str">"src/App.tsx:14"</span>], <span class="tok-key">"search"</span>: <span class="tok-str">"react useeffect tutorial"</span> <span class="tok-punc">}</span></pre>
       </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="col">
+      <p class="kicker">Resuming · session cursor</p>
+      <h2>Pick up from the last unprocessed session</h2>
+      <p>The hook drops a <code class="inl">session</code> marker line at the end of every
+        session, so <code class="inl">evidence.jsonl</code> knows where one session's
+        changes stop. <code class="inl">state.json</code> holds one value — the last
+        session already interpreted. <code class="inl">/ontrack</code> reads evidence
+        <em>after</em> that cursor, does the expensive work only on what's new, then
+        advances it. No second log to keep in sync; the append-only evidence file
+        <em>is</em> the session register.</p>
+    </div>
+    <div class="split">
+      <div class="panel b">
+        <p class="h"><span class="dot"></span>incremental · LLM</p>
+        <p>Concept inference + question authoring run <strong>only over files touched in
+          new sessions</strong>. This is the cost the cursor saves.</p>
+        <div class="file">gated by state.json</div>
+      </div>
+      <div class="panel a">
+        <p class="h"><span class="dot"></span>always full · deterministic</p>
+        <p>Staleness validation re-checks the <strong>whole</strong> set against the
+          current repo — a dep removed two sessions ago only drops out on a full pass.
+          No LLM, so full is free.</p>
+        <div class="file">never gated</div>
+      </div>
+    </div>
+    <div class="col">
+      <p>Delete <code class="inl">state.json</code> → full reprocess (fresh-clone
+        behaviour). The cursor makes re-runs cheap without letting removed things linger.</p>
     </div>
   </section>
 
@@ -515,12 +554,14 @@
       <div class="num">02</div>
       <div class="body">
         <h3>Skill <code class="inl">/ontrack</code> — regenerate + author questions + serve</h3>
-        <p>Read evidence, validate vs. repo → <code class="inl">confirmed</code> items. LLM
-          infers concepts (React → useEffect, JSX, props). <strong>Author a question for
+        <p>Read evidence + the <code class="inl">state.json</code> cursor; validate the
+          whole deduped set vs. repo → <code class="inl">confirmed</code> items (staleness
+          pass stays full). LLM infers concepts <strong>only for sessions after the
+          cursor</strong> (React → useEffect, JSX, props). <strong>Author a question for
           every concept with no question yet, or whose code changed since its answer</strong>
           — pick domain, pick mode, write options (+ answer for graded). Incremental:
-          never re-ask an answered, unchanged concept. Write inventory + questions, start
-          the server.</p>
+          never re-ask an answered, unchanged concept. Write inventory + questions, advance
+          the cursor, start the server.</p>
         <p>It regenerates data + questions only — does not generate HTML, does not grade,
           never asks in chat. The dashboard owns intake, asking, and the path.</p>
       </div>
@@ -549,8 +590,8 @@
       <p class="kicker">Build order</p>
       <h2>Format first, path last</h2>
       <ol class="track">
-        <li><span class="st">Data format.</span><p>evidence + inventory + questions + personal schemas. Format before anything.</p></li>
-        <li><span class="st">Tracker hook.</span><p>Writes confirmed evidence. Prove passive capture.</p></li>
+        <li><span class="st">Data format.</span><p>evidence (+ <code class="inl">session</code> marker) + inventory + questions + personal + <code class="inl">state.json</code> cursor. Format before anything.</p></li>
+        <li><span class="st">Tracker hook.</span><p>Writes confirmed evidence + a session marker per run. Prove passive capture.</p></li>
         <li><span class="st">Build inventory.</span><p><code class="inl">/ontrack</code> builds inventory from confirmed evidence. Prove the core loop.</p></li>
         <li class="done"><span class="st">LLM inference pass.</span><span class="done-tag">done</span><p><code class="inl">inferred</code> / <code class="inl">possible</code> concepts with a <code class="inl">parent</code>.</p></li>
         <li><span class="st">Question authoring pass.</span><p><code class="inl">questions.json</code> — domain, mode, options, answer. One per concept, incremental.</p></li>
@@ -605,6 +646,7 @@
         <div class="frow"><span class="path">.ontrack/concepts.json</span><span class="desc">LLM-authored inferred/possible concepts <span class="git b-conf">committed</span></span></div>
         <div class="frow"><span class="path">.ontrack/questions.json</span><span class="desc">Assessment, one per concept <span class="git b-conf">committed</span></span></div>
         <div class="frow"><span class="path">.ontrack/personal.json</span><span class="desc">Private level + answers <span class="git b-ignored">gitignored</span></span></div>
+        <div class="frow"><span class="path">.ontrack/state.json</span><span class="desc">Processing cursor: last session interpreted <span class="git b-ignored">gitignored</span></span></div>
       </div>
     </div>
   </section>
@@ -621,6 +663,7 @@
         <li><strong>Path:</strong> groups by domain, numbers within group, orders by level, re-sorts live on each answer, no reload.</li>
         <li><strong>Isolation:</strong> server only writes <code class="inl">personal.json</code>; inventory + questions byte-identical after answering.</li>
         <li><strong>Incremental:</strong> re-run <code class="inl">/ontrack</code> with no code change → answered questions kept, not re-asked; change a concept's code → its question re-authored.</li>
+        <li><strong>Cursor:</strong> after a run <code class="inl">state.json</code> equals the newest <code class="inl">session</code> marker; a new session → only its files hit the LLM pass; delete <code class="inl">state.json</code> → full reprocess; a dep removed before the cursor still drops out (validation stayed full).</li>
         <li><strong>Honesty:</strong> no answer or question ever lands in <code class="inl">evidence.jsonl</code>; the server never runs the LLM to grade.</li>
       </ul>
     </div>

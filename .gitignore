@@ -1,6 +1,9 @@
 # OnTrack private per-user state — never commit (see PLAN.md)
 .ontrack/personal.json
 
+# OnTrack processing cursor — machine state, per-clone (see PLAN.md)
+.ontrack/state.json
+
 # Local-only contributor change log
 PROGRESS.md
 
