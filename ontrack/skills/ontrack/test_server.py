@@ -78,7 +78,7 @@ def test_set_answer_and_level():
         rejects(question_id="q:auth/jwt")                          # self_report needs rating
         rejects(question_id="")                                    # empty id
 
-        for bad in ("expert", "", None, "BEGINNER"):
+        for bad in ("senior", "wizard", "", None, "BEGINNER"):
             try:
                 server.set_level(root, bad)
                 assert False, f"should reject level {bad!r}"
@@ -137,8 +137,9 @@ def test_http_routes():
             assert any(q["id"] == "q:react/useeffect" for q in served)
 
             # POST /level
-            assert req("POST", "/level", b'{"level":"senior"}')[0] == 200
+            assert req("POST", "/level", b'{"level":"expert"}')[0] == 200
             assert req("POST", "/level", b'{"level":"wizard"}')[0] == 400
+            assert req("POST", "/level", b'{"level":"senior"}')[0] == 400  # renamed
 
             # POST /answer
             assert req("POST", "/answer", b'{"question_id":"q:react/useeffect","choice":0}')[0] == 200
@@ -152,7 +153,7 @@ def test_http_routes():
             assert req("POST", "/status", b'{}')[0] == 404
 
             data = json.loads((root / ".ontrack" / "personal.json").read_text())
-            assert data["level"] == "senior"
+            assert data["level"] == "expert"
             assert data["answers"]["q:react/useeffect"]["correct"] is True
         finally:
             httpd.shutdown()
@@ -204,7 +205,16 @@ def test_http_get_whitelist():
     print("ok: HTTP GET serves only the whitelist; traversal and unknown paths 404")
 
 
+def test_dashboard_derives_level_from_placement_only():
+    """The level benchmark must use placement questions, not optional probes."""
+    html = (Path(__file__).resolve().parent / "dashboard.html").read_text(encoding="utf-8")
+    assert "q.placement && q.mode === \"graded\"" in html
+
+    print("ok: dashboard derives level from placement graded answers only")
+
+
 if __name__ == "__main__":
     test_set_answer_and_level()
     test_http_routes()
     test_http_get_whitelist()
+    test_dashboard_derives_level_from_placement_only()

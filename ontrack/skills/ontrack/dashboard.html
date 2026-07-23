@@ -30,14 +30,15 @@
   header { border-bottom:1px solid var(--line); padding:28px 24px; }
   .wrap { max-width:860px; margin:0 auto; }
   h1 { font-family:var(--mono); font-size:22px; font-weight:600; margin:0; letter-spacing:-.01em; }
-  .sub { color:var(--muted); font-size:14px; margin-top:6px; max-width:60ch; }
+  .sub { color:var(--muted); font-size:14px; margin-top:6px; max-width:62ch; }
   main { padding:8px 24px 80px; }
   .empty { color:var(--faint); font-size:13.5px; font-style:italic; }
 
   .kicker { font-family:var(--mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase;
             color:var(--faint); margin:32px 0 4px; display:flex; align-items:center; gap:10px; }
   .kicker .n { color:var(--accent); }
-  h2 { font-family:var(--mono); font-size:19px; font-weight:600; margin:0 0 14px; letter-spacing:-.01em; }
+  h2 { font-family:var(--mono); font-size:19px; font-weight:600; margin:0 0 6px; letter-spacing:-.01em; }
+  .lead { color:var(--muted); font-size:13.5px; margin:0 0 14px; max-width:62ch; }
 
   /* intake */
   .intake { background:var(--raise); border:1px solid var(--line); border-radius:10px; padding:20px; margin-top:20px; }
@@ -50,13 +51,21 @@
   .levels b { display:block; font-size:14.5px; }
   .levels small { color:var(--faint); font-size:12.5px; }
 
+  /* derived-level banner */
+  .levelbar { background:var(--accent-soft); border:1px solid var(--accent); border-radius:10px;
+              padding:14px 16px; margin:18px 0 8px; }
+  .levelbar .lv { font-family:var(--mono); font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); }
+  .levelbar .big { font-size:19px; font-weight:700; margin:2px 0; }
+  .levelbar .why { color:var(--muted); font-size:13px; }
+  .levelbar .prov { color:var(--faint); font-style:italic; }
+
   /* question cards */
   .qcard { background:var(--raise); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:12px; }
-  .badges { display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap; }
+  .badges { display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap; align-items:center; }
   .badge { font-family:var(--mono); font-size:11px; letter-spacing:.04em; padding:2px 8px;
            border-radius:3px; border:1px solid currentColor; font-weight:600; }
   .b-dom { color:var(--tolearn); } .b-mode { color:var(--accent); } .b-sr { color:var(--faint); }
-  .b-sec { color:var(--somewhat); }
+  .b-tier { color:var(--somewhat); }
   .qp { font-weight:600; font-size:15.5px; margin:0 0 10px; }
   .opts { display:flex; flex-direction:column; gap:7px; }
   .opt { display:flex; align-items:center; gap:9px; padding:8px 11px; border:1px solid var(--line2);
@@ -67,9 +76,16 @@
   .opt.sel .r { border-color:var(--accent); background:radial-gradient(var(--accent) 0 4px, transparent 5px); }
   .note { margin-top:10px; width:100%; font:13px var(--mono); color:var(--ink); background:var(--paper);
           border:1px dashed var(--line2); border-radius:6px; padding:8px 10px; resize:vertical; }
-  .qsend { margin-top:10px; font:inherit; font-size:13.5px; cursor:pointer; color:#fff; background:var(--accent);
+  .qactions { margin-top:10px; display:flex; gap:8px; align-items:center; }
+  .qsend { font:inherit; font-size:13.5px; cursor:pointer; color:#fff; background:var(--accent);
            border:none; border-radius:6px; padding:7px 16px; }
   .qsend:disabled { opacity:.45; cursor:not-allowed; }
+  .qskip { font:inherit; font-size:13px; cursor:pointer; color:var(--faint); background:none;
+           border:none; text-decoration:underline; padding:7px 4px; }
+
+  .optnote { color:var(--faint); font-size:13px; margin:0 0 12px; }
+  .optnote button { font:inherit; font-size:13px; color:var(--accent); background:none; border:none;
+                    cursor:pointer; text-decoration:underline; padding:0; }
 
   /* learning path */
   .bucket { margin-bottom:20px; }
@@ -80,8 +96,9 @@
   .pstep:last-child { border-bottom:none; }
   .pn { font-family:var(--mono); font-size:13px; color:var(--faint); font-weight:700; }
   .pt { font-size:15px; font-weight:600; }
-  .review-tag { font-family:var(--mono); font-size:10px; color:var(--somewhat); border:1px solid var(--somewhat);
-                border-radius:3px; padding:0 5px; margin-left:8px; letter-spacing:.04em; vertical-align:1px; }
+  .tag { font-family:var(--mono); font-size:10px; border-radius:3px; padding:0 5px;
+         margin-left:8px; letter-spacing:.04em; vertical-align:1px; border:1px solid currentColor; }
+  .t-review { color:var(--somewhat); } .t-prereq { color:var(--tolearn); } .t-suggested { color:var(--faint); }
   .pwhat { color:var(--muted); font-size:13.5px; font-weight:400; margin-top:2px; }
   .pmeta { font-size:12.5px; margin-top:3px; display:flex; gap:10px; flex-wrap:wrap; }
   .pmeta .where { font-family:var(--mono); color:var(--faint); }
@@ -94,28 +111,35 @@
 <header>
   <div class="wrap">
     <h1>OnTrack</h1>
-    <div class="sub">Answer a few questions about what this project is built on. OnTrack turns the gaps into a study path — it points you at what to learn, it doesn't teach it.</div>
+    <div class="sub">A few questions place your level, then OnTrack turns the gaps into a study path pitched for you. It points you at what to learn — it doesn't teach it.</div>
   </div>
 </header>
 <main class="wrap" id="app"><div class="empty">Loading…</div></main>
 
 <script>
 const LEVELS = [
-  ["beginner", "Beginner", "New to most of this — walk me through the basics too."],
-  ["intermediate", "Intermediate", "Comfortable with the fundamentals; focus me on the newer parts."],
-  ["senior", "Senior", "Experienced — only surface what I actually got wrong."],
+  ["beginner", "Beginner", "New to most of this — start me from the basics."],
+  ["intermediate", "Intermediate", "Comfortable with fundamentals; focus me on the newer parts."],
+  ["expert", "Expert", "Experienced — only surface the advanced gaps."],
 ];
-const DOMAIN_ORDER = ["language", "framework", "system-design", "security", "tooling"];
+const LEVEL_LABEL = { beginner:"Beginner", intermediate:"Intermediate", expert:"Expert" };
+const DOMAIN_ORDER = ["language", "framework", "system-design", "security", "tooling", "other"];
 const DOMAIN_LABEL = { "language":"Language", "framework":"Framework",
-  "system-design":"System design", "security":"Security", "tooling":"Tooling" };
-const LEVEL_ORDER = { basic:0, intermediate:1, advanced:2 };
-// self_report label -> knowledge state
+  "system-design":"System design", "security":"Security", "tooling":"Tooling", "other":"Other" };
+const TIER_RANK = { basic:0, intermediate:1, advanced:2 };
 const SELF_STATE = { "Confident":"learned", "Shaky":"review", "New":"learn" };
+
+// benchmark tuning — how much signal we need before trusting the quiz over the
+// declared level, and per-tier before a tier can promote you.
+const MIN_SIGNAL = 3;   // placement graded+tiered answers before the quiz overrides declared
+const MIN_TIER = 2;     // answers within a tier before it can set the level
 
 let inventory = { items: [] };
 let questions = [];
 let personal = { answers: {} };
 let invById = {};
+let qByConcept = {};
+const skipped = new Set();   // session-only: optional questions the user skipped
 
 async function load() {
   const [inv, qs, pers] = await Promise.all([
@@ -128,6 +152,8 @@ async function load() {
   personal = pers && typeof pers === "object" ? pers : {};
   personal.answers = personal.answers || {};
   invById = Object.fromEntries((inventory.items || []).map(i => [i.id, i]));
+  qByConcept = {};
+  for (const q of questions) if (!(q.concept in qByConcept)) qByConcept[q.concept] = q;
   render();
 }
 
@@ -140,22 +166,20 @@ async function postJSON(path, body) {
 
 async function setLevel(level) {
   const prev = personal.level;
-  personal.level = level; render();          // optimistic
+  personal.level = level; render();
   try { await postJSON("/level", { level }); }
   catch (e) { personal.level = prev; render(); alert(e.message); }
 }
 
 async function submitAnswer(q, payload) {
   try {
-    // The server grades (it holds the answer key) and returns the authoritative
-    // answers map — trust that rather than guessing correctness on the client.
     const res = await postJSON("/answer", Object.assign({ question_id: q.id }, payload));
     if (res && res.answers) personal.answers = res.answers;
     render();
   } catch (e) { alert(e.message); }
 }
 
-// knowledge state for one answered question
+// knowledge state from one question's answer
 function stateOf(q) {
   const a = personal.answers[q.id];
   if (!a) return "unanswered";
@@ -163,12 +187,42 @@ function stateOf(q) {
   return SELF_STATE[a.self] || "review";
 }
 
+// derive the real level from placement graded, tiered answers — tier-ceiling:
+// the hardest tier you mostly get right wins; missing basics never demotes you.
+function derivedLevel() {
+  const declared = personal.level || "beginner";
+  const scored = questions.filter(q =>
+    q.placement && q.mode === "graded" && q.level in TIER_RANK && personal.answers[q.id]);
+  if (scored.length < MIN_SIGNAL) {
+    return { level: declared, provisional: true,
+      why: "answer a few more placement questions to confirm — using your declared level for now." };
+  }
+  const tier = t => {
+    const qs = scored.filter(q => q.level === t);
+    const ok = qs.filter(q => personal.answers[q.id].correct).length;
+    return { n: qs.length, ok, rate: qs.length ? ok / qs.length : 0 };
+  };
+  const adv = tier("advanced"), inter = tier("intermediate"), basic = tier("basic");
+  if (adv.n >= MIN_TIER && adv.rate >= 0.5)
+    return { level: "expert", why: `you answered ${adv.ok}/${adv.n} advanced questions correctly.` };
+  if (inter.n >= MIN_TIER && inter.rate >= 0.5)
+    return { level: "intermediate", why: `solid on intermediate (${inter.ok}/${inter.n}); advanced still to prove.` };
+  return { level: "beginner", why: `basics are the place to start (${basic.ok}/${basic.n} so far).` };
+}
+
+// which untested concept tiers appear for a given level
+function showUntested(level, tier) {
+  if (level === "beginner") return true;
+  if (level === "intermediate") return tier !== "basic";
+  return tier === "advanced";   // expert
+}
+
 function ytLink(s) { return "https://www.youtube.com/results?search_query=" + encodeURIComponent(s); }
 function el(tag, cls, txt) { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
 
 function intakeCard() {
   const box = el("div", "intake");
-  box.appendChild(el("p", null, "First — where are you at overall? This only changes how much detail the path shows; you still answer every question."));
+  box.appendChild(el("p", null, "Where are you at overall? This is just a starting point — your answers below refine it, and the quiz result is what actually sets your path."));
   const row = el("div", "levels");
   for (const [val, label, desc] of LEVELS) {
     const b = el("button", personal.level === val ? "on" : null);
@@ -181,12 +235,13 @@ function intakeCard() {
   return box;
 }
 
-function questionCard(q) {
+function questionCard(q, optional) {
   const c = el("div", "qcard");
   const badges = el("div", "badges");
   badges.appendChild(el("span", "badge b-dom", q.domain));
   badges.appendChild(el("span", "badge " + (q.mode === "graded" ? "b-mode" : "b-sr"),
     q.mode === "graded" ? "graded" : "self-report"));
+  if (q.level) badges.appendChild(el("span", "badge b-tier", q.level));
   c.appendChild(badges);
   c.appendChild(el("p", "qp", q.prompt));
 
@@ -211,29 +266,66 @@ function questionCard(q) {
     noteEl.placeholder = "optional: what specifically is fuzzy?";
     c.appendChild(noteEl);
   }
+  const actions = el("div", "qactions");
   const send = el("button", "qsend", "Save answer"); send.disabled = true;
   send.addEventListener("click", () => {
     if (picked == null) return;
     if (q.mode === "graded") submitAnswer(q, { choice: picked });
     else submitAnswer(q, { self: q.options[picked], note: noteEl && noteEl.value.trim() });
   });
-  c.appendChild(send);
+  actions.appendChild(send);
+  if (optional) {
+    const skip = el("button", "qskip", "Skip");
+    skip.addEventListener("click", () => { skipped.add(q.id); render(); });
+    actions.appendChild(skip);
+  }
+  c.appendChild(actions);
   return c;
 }
 
-function pathStep(q, n) {
-  const item = invById[q.concept] || {};
+// Build the ordered learning path from the whole concept inventory, filtered by
+// the derived level. Answered gaps always appear; untested concepts appear by
+// level; foundational prereqs appear only for beginners.
+function buildPath(level) {
+  const steps = [];
+  for (const item of inventory.items || []) {
+    const q = qByConcept[item.id];
+    const st = q ? stateOf(q) : "untested";
+    if (st === "learned") continue;                       // knew it — drop
+    if (st === "learn" || st === "review") {              // confirmed gap — always
+      steps.push({ item, q, kind: st === "review" ? "review" : "gap" });
+      continue;
+    }
+    // untested (no question, or question unanswered)
+    if (item.kind !== "concept") continue;                // only concepts fill gaps
+    if (item.confidence === "foundational") {
+      if (level === "beginner") steps.push({ item, q: null, kind: "prereq" });
+      continue;
+    }
+    const tier = item.level || "intermediate";
+    if (showUntested(level, tier)) steps.push({ item, q: null, kind: "suggested" });
+  }
+  return steps;
+}
+
+function domainOf(step) {
+  return step.item.domain || (step.q && step.q.domain) || "other";
+}
+
+function pathStep(step, n) {
+  const item = step.item;
   const wrap = el("div", "pstep");
   wrap.appendChild(el("span", "pn", n + "."));
   const body = el("div");
-  const t = el("div", "pt", item.name || q.concept);
-  if (stateOf(q) === "review") t.appendChild(el("span", "review-tag", "review"));
+  const t = el("div", "pt", item.name || item.id);
+  const TAG = { review:["review","t-review"], prereq:["prereq","t-prereq"], suggested:["suggested","t-suggested"] };
+  if (TAG[step.kind]) { const [txt, cls] = TAG[step.kind]; t.appendChild(el("span", "tag " + cls, txt)); }
   body.appendChild(t);
   if (item.what) body.appendChild(el("div", "pwhat", item.what));
   const meta = el("div", "pmeta");
   const where = (item.where || []).join(", ");
   if (where) meta.appendChild(el("span", "where", where));
-  const a = el("a", null, "search ›"); a.href = ytLink(item.search || item.name || q.concept);
+  const a = el("a", null, "search ›"); a.href = ytLink(item.search || item.name || item.id);
   a.target = "_blank"; a.rel = "noopener"; meta.appendChild(a);
   body.appendChild(meta);
   wrap.appendChild(body);
@@ -244,7 +336,6 @@ function render() {
   const app = document.getElementById("app");
   app.innerHTML = "";
 
-  // gate on intake level
   if (!personal.level) {
     const k = el("div", "kicker"); k.appendChild(el("span", null, "Start here"));
     app.appendChild(k);
@@ -253,45 +344,67 @@ function render() {
     return;
   }
 
-  // change-level affordance stays available but quiet
-  const lk = el("div", "kicker");
-  lk.appendChild(el("span", "n", "01"));
-  lk.appendChild(el("span", null, "Questions"));
-  app.appendChild(lk);
-  app.appendChild(el("h2", null, "What did this project use?"));
+  // derived-level banner
+  const d = derivedLevel();
+  const bar = el("div", "levelbar");
+  bar.appendChild(el("div", "lv", "Your level"));
+  bar.appendChild(el("div", "big", LEVEL_LABEL[d.level] || d.level));
+  bar.appendChild(el("div", "why" + (d.provisional ? " prov" : ""), d.why));
+  app.appendChild(bar);
 
+  // split unanswered questions into placement (required) + optional
   const unanswered = questions.filter(q => !personal.answers[q.id]);
-  if (!unanswered.length) {
-    app.appendChild(el("div", "done", questions.length
-      ? "All caught up — every question answered. Run /ontrack again after more work to surface new ones."
-      : "No questions yet. Run /ontrack to scan the project and generate them."));
+  const placement = unanswered.filter(q => q.placement);
+  const optional = unanswered.filter(q => !q.placement && !skipped.has(q.id));
+
+  const pk = el("div", "kicker");
+  pk.appendChild(el("span", "n", "01")); pk.appendChild(el("span", null, "Placement"));
+  app.appendChild(pk);
+  app.appendChild(el("h2", null, "Place your level"));
+  app.appendChild(el("p", "lead", "A few quick questions so the path is pitched right — this isn't a test, and there's no grade to chase."));
+  if (placement.length) {
+    for (const q of placement) app.appendChild(questionCard(q, false));
   } else {
-    for (const q of unanswered) app.appendChild(questionCard(q));
+    app.appendChild(el("div", "done", questions.length
+      ? "Placement done — your level above reflects your answers."
+      : "No questions yet. Run /ontrack to scan the project and generate them."));
   }
 
-  // learning path — grouped by domain, in-path = learn|review
-  const pk = el("div", "kicker");
-  pk.appendChild(el("span", "n", "02"));
-  pk.appendChild(el("span", null, "Learning path"));
-  app.appendChild(pk);
-  app.appendChild(el("h2", null, "What to go learn, in order"));
+  // optional deeper questions
+  if (optional.length) {
+    const ok = el("div", "kicker");
+    ok.appendChild(el("span", "n", "02")); ok.appendChild(el("span", null, "More questions"));
+    app.appendChild(ok);
+    app.appendChild(el("h2", null, "Sharpen the path (optional)"));
+    app.appendChild(el("p", "lead", "Answer any of these to pin down exactly what you know — or skip them all. They fine-tune the path; they don't gate it."));
+    for (const q of optional) app.appendChild(questionCard(q, true));
+  }
 
-  const inPath = questions.filter(q => ["learn", "review"].includes(stateOf(q)));
-  if (!inPath.length) {
-    app.appendChild(el("div", "empty", "Nothing to learn yet — answer the questions above and gaps show up here."));
+  // learning path
+  const lk = el("div", "kicker");
+  lk.appendChild(el("span", "n", optional.length ? "03" : "02"));
+  lk.appendChild(el("span", null, "Learning path"));
+  app.appendChild(lk);
+  app.appendChild(el("h2", null, "What to go learn, in order"));
+  app.appendChild(el("p", "lead", "Pitched for " + (LEVEL_LABEL[d.level] || d.level) +
+    ". Things you got wrong always show; the rest is filtered to your level."));
+
+  const steps = buildPath(d.level);
+  if (!steps.length) {
+    app.appendChild(el("div", "empty", "Nothing to learn here — either you knew it, or your level filters it out."));
     return;
   }
   const byDomain = {};
-  for (const q of inPath) (byDomain[q.domain] = byDomain[q.domain] || []).push(q);
+  for (const s of steps) (byDomain[domainOf(s)] = byDomain[domainOf(s)] || []).push(s);
   const domains = Object.keys(byDomain).sort(
     (a, b) => DOMAIN_ORDER.indexOf(a) - DOMAIN_ORDER.indexOf(b));
   for (const dom of domains) {
     const group = byDomain[dom].sort((a, b) =>
-      (LEVEL_ORDER[a.level] ?? 1) - (LEVEL_ORDER[b.level] ?? 1) ||
-      (a.concept < b.concept ? -1 : 1));
+      (TIER_RANK[a.item.level] ?? 1) - (TIER_RANK[b.item.level] ?? 1) ||
+      (a.item.id < b.item.id ? -1 : 1));
     const bucket = el("div", "bucket");
     bucket.appendChild(el("div", "bh", DOMAIN_LABEL[dom] || dom));
-    group.forEach((q, i) => bucket.appendChild(pathStep(q, i + 1)));
+    group.forEach((s, i) => bucket.appendChild(pathStep(s, i + 1)));
     app.appendChild(bucket);
   }
 }

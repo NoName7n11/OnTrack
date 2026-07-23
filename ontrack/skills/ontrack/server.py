@@ -23,7 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Lock
 
-LEVELS = {"beginner", "intermediate", "senior"}
+LEVELS = {"beginner", "intermediate", "expert"}
 PORT_START = 3874
 PORT_TRIES = 20
 PERSONAL_LOCK = Lock()

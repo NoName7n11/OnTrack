@@ -44,17 +44,47 @@ know what the user knows — it asks. See `PLAN.md`.
    - `where` paths are **repo-relative, forward slashes** (`src/App.tsx:14`).
      `build.py` drops paths outside the repo and drops an `inferred` concept left
      with no valid `where`.
-   - Optional `level`: `"basic"` | `"intermediate"` | `"advanced"`.
+   - Optional `level`: `"basic"` | `"intermediate"` | `"advanced"` (the concept's
+     difficulty — the dashboard orders the path by it AND uses it to filter by the
+     user's level, so set it whenever you can judge).
+   - Optional `domain` ∈ `language | framework | system-design | security | tooling`
+     — the learning-path bucket. Set it: the path groups untested concepts by this,
+     and they have no question to borrow a domain from.
    - One line of `what`; a ready `search` query. Do NOT teach.
+
+   **Foundational prerequisites (for beginners).** Also add a few
+   `confidence: "foundational"` concepts: the *prerequisites* a detected
+   library/language rests on but that aren't a specific code feature — e.g. a
+   project using Flask implies "Python basics", "HTTP requests", "JSON". These are
+   shown in the path **only when the user's derived level is Beginner**, to make a
+   beginner's path denser and steeper. Rules: `parent` must be a confirmed item,
+   `level` is normally `"basic"`, set a `domain`, and **no `where`** (they aren't
+   code-detected — that's the point). Keep them to genuine foundations of the
+   project's stack; this is not a general curriculum.
+   ```json
+   { "id": "concept:python/basics", "name": "Python basics", "parent": "language:python",
+     "confidence": "foundational", "level": "basic", "domain": "language",
+     "what": "Variables, functions, control flow", "search": "python for beginners" }
+   ```
 
 3. **Question-authoring pass (you, the model, do this).** Load any existing
    `.ontrack/questions.json` and **keep every question already there** (answered
-   ones must survive). For each concept in the inventory that does **not** yet have
-   a question, author exactly one and append it. Write `.ontrack/questions.json`:
+   ones must survive). Questions come in two roles — you do NOT need one per
+   concept:
+   - **Placement questions** (`placement: true`) — a **small compulsory set** that
+     places the user's level. Author roughly **2 per difficulty tier**
+     (`basic` / `intermediate` / `advanced`), spread across the main domains — aim
+     for ~6, not one per concept. They **must be `graded`** (the level is scored
+     from correct/incorrect) and **must carry a `level`**. This is the set the user
+     is asked up front; keep it short.
+   - **Optional questions** (no `placement`) — deeper, skippable probes for
+     specific concepts. Add them for concepts worth pinning down, but the user can
+     skip them all; they refine the path, they don't gate it. Don't flood.
+
    ```json
    { "questions": [
      { "id": "q:react/useeffect", "concept": "concept:react/useeffect",
-       "domain": "framework", "mode": "graded", "level": "basic",
+       "domain": "framework", "mode": "graded", "level": "intermediate", "placement": true,
        "prompt": "What does useEffect do?",
        "options": ["Runs side effects after render", "Styles a component", "Defines a route"],
        "answer": 0 },
@@ -66,17 +96,18 @@ know what the user knows — it asks. See `PLAN.md`.
    ```
    Rules:
    - `concept` MUST be a real inventory `id` (orphans are dropped by `build.py`).
-   - `domain` ∈ `language | framework | system-design | security | tooling` — this
-     is what the learning path buckets by. Pick the truest fit for the concept.
+   - `domain` ∈ `language | framework | system-design | security | tooling`.
    - `mode`:
-     - `graded` for a concept with a **clean, checkable answer** (a language
-       feature, an API's behaviour). Give 3 plausible `options` and an integer
-       `answer` index (0-based) of the correct one. Keep distractors fair, not
-       trick questions.
-     - `self_report` for a **judgment** concept (system design, security posture)
-       where "correct" is situational. Use the options `["Confident","Shaky","New"]`
-       (the dashboard maps Confident→Learned, Shaky→Review, New→Learn). No `answer`.
-   - Optional `level` orders the path within a domain (basics first).
+     - `graded` for a **clean, checkable answer**. Give 3 plausible `options` and an
+       integer `answer` index (0-based). Fair distractors, not trick questions.
+     - `self_report` for a **judgment** concept where "correct" is situational. Use
+       `["Confident","Shaky","New"]` (dashboard maps Confident→Learned, Shaky→Review,
+       New→Learn). No `answer`. Self-report questions **cannot be placement** (no
+       correct answer to score).
+   - `level` orders the path AND scores the user's level — always set it on
+     placement questions; set it on optional ones when you can.
+   - `placement: true` only on graded questions with a `level`. Span the tiers so
+     the user can actually be placed as Expert (needs advanced) or Beginner.
    - **Incremental**: never rewrite or re-order an existing question, and never add
      a second question for a concept that already has one.
    - You author the answer key here, but it never reaches the browser — the server
@@ -95,11 +126,15 @@ know what the user knows — it asks. See `PLAN.md`.
    ```
    Binds `127.0.0.1`, prints the URL (default `http://localhost:3874`).
 
-6. Tell the user to open that URL. There they **declare their level** once, then
-   answer the questions; correct/Confident answers drop out, wrong/Shaky/New ones
-   flow into the **Learning path**, grouped by domain and ordered. Answers save to
-   `.ontrack/personal.json`. After more coding, run `/ontrack` again — new concepts
-   get new questions; already-answered ones are left alone.
+6. Tell the user to open that URL. They pick a starting level (Beginner /
+   Intermediate / **Expert**), then answer the short **Placement** set. From those
+   answers the dashboard **derives their real level** (the hardest tier they mostly
+   get right — the quiz overrides the declared pick) and builds the **Learning
+   path**: things they got wrong always appear; untested concepts appear filtered
+   to their level (a Beginner sees basics + foundational prereqs, an Expert only
+   advanced gaps). Optional deeper questions are skippable. Answers save to
+   `.ontrack/personal.json`. Re-run `/ontrack` after more coding — new concepts get
+   new questions; answered ones are left alone.
 
 Do not explain or teach the technologies in chat — the dashboard is the view, and
 the user learns the path elsewhere.
@@ -112,5 +147,7 @@ the user learns the path elsewhere.
 - The server writes only `.ontrack/personal.json`; everything else is read-only to
   it, and the graded `answer` key is stripped before questions reach the browser.
 - Confidence stays honest: `confirmed` = deterministic evidence, `inferred` =
-  code-backed concept, `possible` = weak guess.
+  code-backed concept, `possible` = weak guess, `foundational` = prerequisite of a
+  detected tech (no code line, beginner-only in the path).
 - Knowledge state comes only from the user's answers — OnTrack never guesses it.
+  The level is derived from the placement answers, not asserted by the tool.
