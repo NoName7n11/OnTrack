@@ -4,16 +4,18 @@
 
 People build projects with AI agents (Claude Code, Codex) but often don't know
 what's inside them — the agent picks the libraries, writes the auth, wires the
-config. OnTrack passively tracks what your project actually uses as it grows, then
-shows you an inventory you can scan: "here's everything this project uses." Spot
-anything you don't recognize, mark where you stand, go learn it.
+config. OnTrack passively tracks what your project actually uses, works out the
+concepts behind it, then **asks you a short placement quiz** to gauge what you
+know. From your answers it builds a **step-by-step learning path** — what to go
+learn, pitched to your level.
 
-OnTrack's job is **awareness, not curriculum**. It tells you *what exists* and
-*what to search for*. You learn elsewhere (YouTube, docs). It never claims to know
-what you know — you mark that yourself.
+OnTrack's job is **a route, not a course**. It tells you *what exists* and *what
+to search for*; you learn elsewhere (YouTube, docs). It doesn't teach the
+material, and it doesn't guess your level — it derives it from your answers.
 
-> **Status:** early development. Core tracking, inventory build, concept merge, and
-> local dashboard pieces are implemented for the Claude Code prototype.
+> **Status:** alpha. The full loop works end-to-end — passive tracking, concept
+> inference, a placement quiz that derives your level, and a local dashboard that
+> turns the gaps into a level-pitched learning path.
 
 ## Install
 
@@ -24,9 +26,9 @@ OnTrack is packaged as a Claude Code plugin. This repo is its marketplace.
 /plugin install ontrack@ontrack
 ```
 
-Then in any project, run `/ontrack:ontrack` to build the inventory and open the
-dashboard. A `SessionEnd` hook records observations automatically. (Requires
-Python 3.11+ on PATH.)
+Then in any project, run `/ontrack` to scan the project, generate the questions,
+and open the dashboard. A `SessionEnd` hook records observations automatically.
+(Requires Python 3.11+ on PATH.)
 
 To hack on it locally without installing, load the plugin directly:
 
@@ -36,30 +38,65 @@ claude --plugin-dir ./ontrack
 
 ## How it works
 
-1. A Claude Code **`SessionEnd` hook** appends plain observations (deps and file
-   types) to `.ontrack/evidence.jsonl` — boring facts, no guessing.
-2. The **`/ontrack` skill** runs a light inference pass over the code to name the
-   specific concepts in use (React → `useEffect`, JSX, props) into
-   `.ontrack/concepts.json`, then `build.py` validates observations + concepts
-   against the current repo and writes `.ontrack/inventory.json` (what the project
-   uses). Each item is labelled `confirmed` (deterministic), `inferred`
-   (code-backed concept), or `possible` (weak guess).
-3. A **local dashboard** (`localhost:3874`) renders the inventory grouped into
-   **To Review / Learning / Learned / Ignored**, concepts nested under their
-   library (`possible` hidden until you ask). You mark each item's status; it
-   saves to `.ontrack/personal.json` (private, git-ignored).
+1. A Claude Code **`SessionEnd` hook** appends plain observations (deps, file
+   types) to `.ontrack/evidence.jsonl` — boring facts, no guessing — plus a
+   `session` marker so `/ontrack` can resume where it left off.
+2. The **`/ontrack` skill** reads the code and does two authoring passes:
+   - **concepts** → `.ontrack/concepts.json`: the specific things in use
+     (React → `useEffect`, JSX; a JWT dep → signing, verify, expiry), plus a few
+     `foundational` prerequisites a beginner would need (e.g. "Python basics").
+   - **questions** → `.ontrack/questions.json`: a small compulsory **placement**
+     set (spans difficulty) that places your level, plus optional, skippable
+     probes. `graded` multiple-choice where there's a clean answer, or
+     `self_report` (Confident / Shaky / New) for judgment topics.
+
+   `build.py` validates everything against the current repo and writes
+   `.ontrack/inventory.json`. Stale deps and orphaned concepts/questions drop out.
+3. A **local dashboard** (`localhost:3874`) runs the assessment. You pick a
+   starting level (Beginner / Intermediate / Expert), answer the placement set,
+   and OnTrack **derives your real level** from the answers (the hardest tier you
+   mostly get right wins — being rusty on basics doesn't demote you; the quiz
+   overrides your declared pick). The **learning path** is then pitched to that
+   level: things you got wrong always show; untested concepts appear filtered to
+   your level (a Beginner sees basics + foundational prereqs, an Expert only
+   advanced gaps). Each step has a one-line *what*, the *file:line* it's used in,
+   and a search link. Your level + answers save to `.ontrack/personal.json`
+   (private, git-ignored).
+
+The graded answer key never reaches the browser — the server strips it and grades
+server-side.
 
 Data files, by owner:
 
-| File                      | Owner                    | Committed? |
-|---------------------------|--------------------------|------------|
-| `.ontrack/evidence.jsonl` | hook (observations)      | yes        |
-| `.ontrack/concepts.json`  | `/ontrack` LLM inference | yes        |
-| `.ontrack/inventory.json` | `build.py` (derived)     | yes        |
-| `.ontrack/personal.json`  | you (your status)        | **no**     |
+| File                      | Owner                     | Committed? |
+|---------------------------|---------------------------|------------|
+| `.ontrack/evidence.jsonl` | hook (observations)       | yes        |
+| `.ontrack/concepts.json`  | `/ontrack` (LLM)          | yes        |
+| `.ontrack/questions.json` | `/ontrack` (LLM)          | yes        |
+| `.ontrack/inventory.json` | `build.py` (derived)      | yes        |
+| `.ontrack/personal.json`  | you (level + answers)     | **no**     |
+| `.ontrack/state.json`     | `build.py` (resume cursor)| **no**     |
 
 The project's tech **is** your knowledge map — that's why tracking the project
 tells you what you need to know.
+
+## Running the dashboard by hand
+
+`/ontrack` does this for you, but you can drive the pieces directly (handy for
+alpha testing). From a project that already has an `.ontrack/` folder:
+
+```
+python ontrack/skills/ontrack/server.py
+```
+
+It serves the current directory's `.ontrack/` on `127.0.0.1:3874` (bumps the port
+if busy). Open the printed URL; `Ctrl-C` stops it. To replay the level prompt,
+reset your answers: overwrite `.ontrack/personal.json` with `{"answers":{}}`.
+
+To regenerate the data from scratch: run `ontrack/hooks/track.py` in the project
+(records evidence), then `ontrack/skills/ontrack/build.py` (builds inventory +
+validates questions). The concept/question authoring in between is the model's
+job — that's what `/ontrack` orchestrates.
 
 ## Design
 

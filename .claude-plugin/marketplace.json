@@ -8,7 +8,7 @@
     {
       "name": "ontrack",
       "source": "./ontrack",
-      "description": "Know what you built — passively tracks what your project uses, so you know what to learn."
+      "description": "Know what you built — tracks what your project uses, places your level with a short quiz, and builds a learning path pitched to you."
     }
   ]
 }
