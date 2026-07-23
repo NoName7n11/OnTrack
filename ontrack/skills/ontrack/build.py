@@ -39,7 +39,10 @@ EXT_LANG = {
 }
 
 
-CONCEPT_CONF = {"inferred", "possible"}
+# inferred/possible = code-detected concepts; foundational = a prerequisite of a
+# detected library/language (e.g. "Python basics"), NOT pinpointed in code, so it
+# carries no `where` and is shown in the path only for Beginner-level users.
+CONCEPT_CONF = {"inferred", "possible", "foundational"}
 LEVELS = {"basic", "intermediate", "advanced"}
 DOMAINS = {"language", "framework", "system-design", "security", "tooling"}
 MODES = {"graded", "self_report"}
@@ -52,12 +55,14 @@ def _slug(s):
 def _load_concepts(root, confirmed_ids):
     """Load LLM-authored concept items from concepts.json and validate them.
 
-    Concepts are the `inferred`/`possible` layer written by the /ontrack skill's
-    inference pass (Claude), kept in a separate file so build.py never clobbers
-    them. Validation keeps them honest against the current repo:
-    - confidence must be inferred|possible (confirmed is deterministic-only),
+    Concepts are the `inferred`/`possible`/`foundational` layer written by the
+    /ontrack skill's inference pass (Claude), kept in a separate file so build.py
+    never clobbers them. Validation keeps them honest against the current repo:
+    - confidence must be inferred|possible|foundational (confirmed is deterministic-only),
     - parent must be a currently-confirmed item id (orphans are dropped),
-    - `where` file paths that no longer exist are pruned.
+    - `where` file paths that no longer exist are pruned,
+    - `inferred` needs at least one real `where`; `possible`/`foundational` may
+      have none (foundational prereqs are not code-detected by design).
     """
     root = Path(root)
     data = None
@@ -111,10 +116,14 @@ def _load_concepts(root, confirmed_ids):
             "search": c.get("search") or c.get("name") or cid,
             "from": c.get("from", []),
         }
-        # Optional learning difficulty, used only to order the dashboard's Learning
+        # Optional learning difficulty, used to order the dashboard's Learning
         # path (basic before advanced). Invalid/absent values are simply omitted.
         if c.get("level") in LEVELS:
             item["level"] = c["level"]
+        # Optional domain, so the dashboard can bucket even UNTESTED concepts
+        # (which have no question to borrow a domain from) into the right group.
+        if c.get("domain") in DOMAINS:
+            item["domain"] = c["domain"]
         out.append(item)
     return out
 
@@ -129,7 +138,9 @@ def validate_questions(root, inventory_ids):
     - mode ∈ graded|self_report, domain ∈ DOMAINS,
     - options is a list of ≥2 labels,
     - graded carries an int `answer` index within range; self_report has none,
-    - level ∈ LEVELS is optional (used only to order the path).
+    - level ∈ LEVELS is optional (used to order the path AND to score the level),
+    - `placement: true` marks a compulsory placement question; it is honoured only
+      for `graded` questions (placement needs a correct/incorrect signal).
     Duplicate ids keep the first. Stable order: sorted by id.
     """
     root = Path(root)
@@ -181,6 +192,10 @@ def validate_questions(root, inventory_ids):
             item["answer"] = ans
         if q.get("level") in LEVELS:
             item["level"] = q["level"]
+        # Compulsory placement question — only meaningful when graded (needs a
+        # correct/incorrect signal to score the user's level).
+        if q.get("placement") is True and mode == "graded":
+            item["placement"] = True
         seen.add(qid)
         out.append(item)
     return sorted(out, key=lambda x: x["id"])

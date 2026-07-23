@@ -99,30 +99,42 @@ interpretation time — never on evidence.
 
 ### `.ontrack/concepts.json` — LLM-authored concept layer (committed)
 Written by the `/ontrack` inference pass (Claude), kept **separate from
-inventory.json** so the deterministic `build.py` never clobbers it. Holds only
-`inferred`/`possible` concept items, each with a `parent` that must be a confirmed
-inventory id. `build.py` validates and merges these into `inventory.json`:
-orphaned concepts (parent gone) are dropped; `where` file paths that no longer
-exist are pruned; `confirmed` always wins on an id collision.
+inventory.json** so the deterministic `build.py` never clobbers it. Each item has
+a `parent` that must be a confirmed inventory id, an optional `level` (difficulty)
+and `domain` (path bucket). Three confidences:
+- **`inferred`** — code-detected, requires a real `where` (`file:line`).
+- **`possible`** — weak/ambient guess, `where` optional.
+- **`foundational`** — a *prerequisite* of a detected library/language, not a code
+  feature (e.g. "Python basics" under `language:python`). No `where` by design;
+  shown in the path **only when the user's derived level is Beginner**.
+
+`build.py` validates and merges these into `inventory.json`: orphaned concepts
+(parent gone) are dropped; `where` paths that no longer exist are pruned; an
+`inferred` concept left with no valid `where` is dropped; `confirmed` always wins
+on an id collision.
 
 ### `.ontrack/questions.json` — the assessment (committed)
-LLM-authored, one question per concept worth asking. Ties a concept to a
-`domain` and a question the dashboard renders. Two modes:
-- **`graded`** — multiple-choice with a clean correct answer. Carries an `answer`
-  index. Used for concrete, checkable facts. The **server** grades by comparing
-  the chosen index to `answer` — no LLM at grade time (cheap, offline, no fuzzy
-  judgment).
-- **`self_report`** — no correct answer; the user rates their own comfort. Used
-  for judgment concepts (system design, security posture) where "correct" is
-  situational. Never graded.
+LLM-authored. **Not** one per concept — that overwhelmed testers. Two roles:
+- **Placement** (`placement: true`) — a small compulsory set (~2 per difficulty
+  tier, ~6 total) that **places the user's level**. Must be `graded` and carry a
+  `level`. This is what the user is asked up front.
+- **Optional** (no `placement`) — deeper, skippable probes for specific concepts.
+  They refine the path; they don't gate it.
 
-`domain` ∈ `language | framework | system-design | security | tooling` — this is
-what the learning path buckets by. `level` ∈ `basic | intermediate | advanced`
-orders questions within a domain.
+Two modes:
+- **`graded`** — multiple-choice with a clean correct answer (`answer` index). The
+  **server** grades by comparing the chosen index to `answer` — no LLM at grade
+  time (cheap, offline). Placement questions are always graded.
+- **`self_report`** — no correct answer; the user rates comfort. Judgment concepts
+  (system design, security posture). Never graded, never placement.
+
+`domain` ∈ `language | framework | system-design | security | tooling` (path
+bucket). `level` ∈ `basic | intermediate | advanced` orders the path **and** scores
+the user's level.
 ```json
 { "questions": [
   { "id": "q:react/useeffect", "concept": "concept:react/useeffect",
-    "domain": "framework", "mode": "graded", "level": "basic",
+    "domain": "framework", "mode": "graded", "level": "intermediate", "placement": true,
     "prompt": "What does useEffect do?",
     "options": ["Runs side effects after render", "Styles a component", "Defines a route"],
     "answer": 0 },
@@ -146,9 +158,11 @@ per question, keyed by question `id`. Not inferred — the user tells it. Affect
     "q:auth/jwt-storage": { "self": "Shaky", "note": "not sure about refresh", "at": "2026-07-20T10:01:00Z" }
   } }
 ```
-`level` ∈ `beginner | intermediate | senior` (set once at intake, editable).
-`graded` answers store `choice` (index); `self_report` answers store `self` (the
-chosen label) + optional free-text `note`.
+`level` here is the **declared** intake value ∈ `beginner | intermediate | expert`.
+It is provisional — the dashboard **derives the real level from the graded answers**
+and that override drives the path (see Intake). `graded` answers store `choice`
+(index) + server-graded `correct`; `self_report` answers store `self` (the chosen
+label) + optional free-text `note`.
 
 ### `.ontrack/state.json` — processing cursor (gitignored)
 Machine state, not project truth and not user data — so it's gitignored (a fresh
@@ -175,23 +189,45 @@ Two operations run on `/ontrack`, and only one is safe to make incremental:
 
 So the cursor makes re-runs cheap without letting removed things linger.
 
-## Intake — declare level once
-Before questions, the dashboard asks the user's overall level. **Level scales path
-depth, not which questions are asked** — everyone answers, but for a `senior` the
-`basic`-level concepts they get right drop straight to Learned and never clutter
-the path. A senior can still have gaps, so we don't pre-skip; we let the answer
-decide and just avoid burying them in fundamentals they clearly know.
+## Intake + placement — declared, then derived
+The user first picks a **provisional** level (`beginner | intermediate | expert`).
+That pick only seeds the framing; the **quiz overrides it**. From the graded
+placement answers the dashboard **derives the real level** and that drives the path.
+
+**Benchmark (difficulty-volume / tier-ceiling).** The hardest tier the user mostly
+gets right wins; being rusty on basics never demotes them. Computed client-side
+from server-graded `correct` flags on graded, tiered answers:
+- ≥2 answered `advanced` and ≥50% correct → **Expert**
+- else ≥2 answered `intermediate` and ≥50% correct → **Intermediate**
+- else → **Beginner**
+- fewer than 3 graded+tiered answers → fall back to the declared level (provisional).
+
+The derived level + a one-line rationale are shown to the user — this is the visible
+"how was I placed?" answer. Thresholds are constants, easy to tune.
 
 ## Answer → concept state (deterministic)
 The server never interprets; it grades MCQs and stores answers. The **dashboard**
-derives each concept's state from its answer for display + path placement:
+derives each concept's state from its answer, then places it in the path:
 
-| answer                                   | state    | in path? |
-|------------------------------------------|----------|----------|
-| graded correct · self=`Confident`        | Learned  | no       |
-| self=`Shaky`                             | Review   | yes      |
-| graded wrong · self=`New`                | Learn    | yes      |
-| *(unanswered)*                           | To Ask   | no (asked first) |
+| answer                                   | state    | in path?             |
+|------------------------------------------|----------|----------------------|
+| graded correct · self=`Confident`        | Learned  | no                   |
+| self=`Shaky`                             | Review   | **yes** (any level)  |
+| graded wrong · self=`New`                | Learn    | **yes** (any level)  |
+| *(untested)*                             | —        | by level (see below) |
+
+**Path density by derived level.** A concept the user got wrong/Shaky/New always
+appears. An **untested** concept (no question, or unanswered) appears filtered by
+level — this is what lets us *stop quizzing every concept*:
+
+| derived level | untested basic | untested intermediate | untested advanced | foundational prereqs |
+|---------------|:---:|:---:|:---:|:---:|
+| Beginner      | show | show | show | **show** |
+| Intermediate  | hide | show | show | hide |
+| Expert        | hide | hide | show | hide |
+
+Correct / Confident answers drop out. The path buckets by `domain`, orders by
+`level` within.
 
 ## Confidence levels — enforce the honesty line
 Separate from knowledge state above; this is about *detection* certainty, on
@@ -233,11 +269,12 @@ On demand, MVP flow:
    sessions (the cursor gates this expensive step) → `inferred` / `possible`
    concept items with `parent` + file:line evidence. (Where "React" becomes
    "useEffect", "JSX", "props" — the granularity that matters.)
-3. **Author questions** for every concept that has no question yet, or whose code
-   changed since the last answer. Pick `domain`, pick `mode` (graded vs
-   self_report), write options (+ `answer` for graded). **Incremental** — never
-   re-ask an answered, unchanged concept. Reuses the re-verify check
-   (`answer.at` vs `where` last-modified). Write `questions.json`.
+3. **Author questions** — a small **placement** set (~2 per difficulty tier,
+   graded, `placement:true`) that spans tiers so the user can be placed, plus
+   optional deeper probes for concepts worth pinning down. Not one per concept.
+   Pick `domain`/`mode`/`level`, write options (+ `answer` for graded). Also author
+   a few `foundational` prereq concepts (beginner-only path items). **Incremental** —
+   never re-ask an answered, unchanged concept. Write `questions.json`.
 4. Write `inventory.json` = everything (stable order, only if changed). Advance
    `state.json`'s `last_processed_session` to the newest session marker seen.
 5. Start local server, print: `Open http://localhost:3874`.
@@ -252,18 +289,22 @@ source code, not a generated artifact — churns only when the UI improves). At
 runtime it `fetch`es `inventory.json` + `questions.json` (project truth) +
 `personal.json` (user state) and renders client-side.
 
-Two sections:
-- **Questions** — an intake level picker first (if `level` unset), then a card per
-  unanswered question: prompt · radio options · optional text note (`self_report`
-  only). Submit → `POST /answer`.
-- **Learning Path** — derived, grouped by `domain` (Language / Framework / System
-  design / Security / Tooling), numbered within each group, ordered by concept
-  `level`. Shows only Learn/Review concepts. Each step: concept · what · used-in
-  (file:line) · search query. Re-sorts live as questions get answered.
+Flow (level derived + path built entirely client-side):
+1. **Intake** — a level picker (Beginner / Intermediate / Expert) if `level` unset.
+   Provisional; framed as "your answers refine this".
+2. **Your level** — a banner showing the *derived* level + one-line rationale,
+   updating live as answers change.
+3. **Placement** — the compulsory `placement` questions, with copy explaining the
+   purpose ("place your level — not a test").
+4. **More questions (optional)** — non-placement questions, each with a **Skip**
+   (session-only). "Sharpen the path, or skip."
+5. **Learning path** — derived, grouped by `domain`, ordered by concept `level`,
+   filtered by the density table above (untested concepts by level; foundational
+   prereqs for Beginners; wrong/Shaky/New always shown). Each step: concept · what ·
+   used-in (file:line) · search query. Re-sorts live.
 
-A "new since last run" badge/filter on the Questions section is a natural extra:
-it's *derived* from the cursor (concepts from sessions after
-`last_processed_session`), not a stored file — no parallel log to keep in sync.
+The graded `answer` key is stripped from the served `questions.json`; the browser
+learns correctness only from the server's grade (`personal.json`).
 
 Server scope (local-only + security):
 - **Stdlib only** (Python `http.server` / Node one-file). No deps. Serves the
@@ -319,8 +360,8 @@ Plugin-internal command paths use `${CLAUDE_PLUGIN_ROOT}`; data still writes to 
 - `ontrack/skills/ontrack/build.py` — merges confirmed evidence + concepts → inventory
 - `.ontrack/evidence.jsonl` — append-only facts (committed)
 - `.ontrack/inventory.json` — derived view (committed)
-- `.ontrack/concepts.json` — LLM-authored inferred/possible concepts (committed)
-- `.ontrack/questions.json` — LLM-authored assessment, one per concept (committed)
+- `.ontrack/concepts.json` — LLM-authored inferred/possible/foundational concepts (committed)
+- `.ontrack/questions.json` — LLM-authored assessment: placement + optional (committed)
 - `.ontrack/personal.json` — private level + answers (gitignored)
 - `.ontrack/state.json` — processing cursor: last session interpreted (gitignored)
 - `.gitignore` — ignore `personal.json` + `state.json`
@@ -344,13 +385,18 @@ Plugin-internal command paths use `${CLAUDE_PLUGIN_ROOT}`; data still writes to 
 - Questions: `/ontrack` writes `questions.json` — a `graded` MCQ for `useEffect`
   (with `answer`), a `self_report` probe for JWT storage. Every `concept` is a
   real inventory id; no question for a concept that doesn't exist.
-- Intake: open `localhost:3874` with no `level` → level picker shows first; pick
-  `beginner` → `personal.json` gets `"level":"beginner"`; questions then render.
-- Grading: answer the `useEffect` MCQ correctly → server records the answer, the
-  concept shows Learned and stays out of the path; answer wrong → shows Learn and
-  appears in the Framework bucket. `self_report`=`Shaky` → Review, in path.
-- Path: Learning Path groups by domain, numbers within group, orders by concept
-  `level`, and re-sorts live on each answer with no reload.
+- Intake: open `localhost:3874` with no `level` → picker (Beginner/Intermediate/
+  **Expert**) shows first; pick one → `personal.json` gets that `level`; placement
+  questions render.
+- Placement / benchmark: answer the placement set so `advanced` is mostly correct
+  → derived-level banner reads **Expert** with a rationale, and the path is sparse
+  (advanced only, no prereqs). Re-answer so only basics are right → **Beginner**,
+  path dense incl. `foundational` prereqs. A wrong-answered basic still appears at
+  any level.
+- Grading: answer a `graded` MCQ correctly → concept Learned, out of path; wrong →
+  Learn, in its domain bucket. `self_report`=`Shaky` → Review; `New` → Learn.
+- Path: groups by domain, orders by concept `level`, re-sorts live on each answer
+  with no reload; optional questions are skippable.
 - Isolation: confirm the server only ever writes `personal.json`; `inventory.json`
   and `questions.json` byte-identical after answering.
 - Incremental: answer a question, re-run `/ontrack` with no code change → that

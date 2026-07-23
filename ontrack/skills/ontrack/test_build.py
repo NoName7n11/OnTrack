@@ -82,10 +82,18 @@ def test_concept_merge():
             '{"type":"dependency","name":"react","source":"package.json","detected_at":"x"}\n')
         # concepts authored by the LLM pass
         (root / ".ontrack" / "concepts.json").write_text(json.dumps({"concepts": [
-            # valid: parent confirmed (library:react), file exists, valid level kept
+            # valid: parent confirmed (library:react), file exists, valid level + domain kept
             {"id": "concept:react/useeffect", "name": "useEffect",
              "parent": "library:react", "confidence": "inferred", "level": "basic",
-             "what": "side effects", "where": ["App.tsx:3"], "search": "react useeffect"},
+             "domain": "framework", "what": "side effects", "where": ["App.tsx:3"],
+             "search": "react useeffect"},
+            # foundational prereq: no `where` required, parent confirmed -> kept
+            {"id": "concept:react/js-basics", "name": "JavaScript basics",
+             "parent": "library:react", "confidence": "foundational", "level": "basic",
+             "domain": "language", "what": "vars, functions", "where": []},
+            # bad domain on a concept -> domain omitted, concept still kept
+            {"id": "concept:react/props", "name": "props", "parent": "library:react",
+             "confidence": "inferred", "domain": "vibes", "where": ["App.tsx:1"]},
             # possible confidence is kept; invalid level is dropped from the item
             {"id": "concept:react/suspense", "name": "Suspense",
              "parent": "library:react", "confidence": "possible", "level": "expert",
@@ -121,7 +129,15 @@ def test_concept_merge():
         assert "concept:react/memo" not in by_id, "inferred concept with no evidence dropped"
         assert "concept:react/outside" not in by_id, "outside-repo where path dropped"
         assert by_id["concept:react/useeffect"]["level"] == "basic", "valid level kept"
+        assert by_id["concept:react/useeffect"]["domain"] == "framework", "valid domain kept"
         assert "level" not in by_id["concept:react/suspense"], "invalid level omitted"
+        # foundational prereq kept despite empty where; domain kept
+        assert "concept:react/js-basics" in by_id, "foundational concept kept without where"
+        assert by_id["concept:react/js-basics"]["confidence"] == "foundational"
+        assert by_id["concept:react/js-basics"]["domain"] == "language"
+        # bad domain omitted but concept survives (has valid where)
+        assert "concept:react/props" in by_id, "concept with bad domain still kept"
+        assert "domain" not in by_id["concept:react/props"], "invalid domain omitted"
         # every concept points at a real confirmed parent
         conf = {i["id"] for i in inv["items"] if i["confidence"] == "confirmed"}
         for it in inv["items"]:
@@ -142,14 +158,15 @@ def test_validate_questions():
         (root / ".ontrack").mkdir()
         inv_ids = {"concept:react/useeffect", "concept:auth/jwt"}
         (root / ".ontrack" / "questions.json").write_text(json.dumps({"questions": [
-            # valid graded: answer index in range, level kept
+            # valid graded placement: answer index in range, level + placement kept
             {"id": "q:react/useeffect", "concept": "concept:react/useeffect",
-             "domain": "framework", "mode": "graded", "level": "basic",
+             "domain": "framework", "mode": "graded", "level": "basic", "placement": True,
              "prompt": "What does useEffect do?",
              "options": ["Runs after render", "Styles", "Routes"], "answer": 0},
-            # valid self_report: no answer needed
+            # valid self_report: no answer needed; placement:true must be IGNORED
+            # (self_report can't be scored, so it can't be a placement question)
             {"id": "q:auth/jwt", "concept": "concept:auth/jwt",
-             "domain": "security", "mode": "self_report",
+             "domain": "security", "mode": "self_report", "placement": True,
              "prompt": "Comfortable with JWT storage?",
              "options": ["Confident", "Shaky", "New"]},
             # orphan: concept not in inventory -> dropped
@@ -184,7 +201,9 @@ def test_validate_questions():
         assert set(by_id) == {"q:react/useeffect", "q:auth/jwt"}, by_id
         assert by_id["q:react/useeffect"]["answer"] == 0
         assert by_id["q:react/useeffect"]["level"] == "basic"
+        assert by_id["q:react/useeffect"]["placement"] is True, "graded placement flag kept"
         assert "answer" not in by_id["q:auth/jwt"], "self_report has no answer key"
+        assert "placement" not in by_id["q:auth/jwt"], "self_report cannot be placement"
         assert [q["id"] for q in qs] == sorted(q["id"] for q in qs), "id-sorted"
 
         # write-only-if-changed
