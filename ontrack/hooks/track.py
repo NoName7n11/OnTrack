@@ -125,12 +125,22 @@ def scan_project(root):
 
 
 def append_evidence(root, observations):
+    """Append observations, then one `session` boundary marker line.
+
+    The marker carries no observation — it lets /ontrack know where this
+    session's facts stop, so it can resume from the last unprocessed session
+    instead of re-scanning the whole log. See PLAN.md.
+    """
     from pathlib import Path
     out_dir = Path(root) / ".ontrack"
     out_dir.mkdir(exist_ok=True)
+    marker_ts = _now()
     with open(out_dir / "evidence.jsonl", "a", encoding="utf-8") as f:
         for o in observations:
             f.write(json.dumps(o, ensure_ascii=False) + "\n")
+        f.write(json.dumps(
+            {"type": "session", "id": marker_ts, "detected_at": marker_ts},
+            ensure_ascii=False) + "\n")
 
 
 def _cwd_from_stdin():

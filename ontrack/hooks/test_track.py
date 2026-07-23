@@ -35,11 +35,15 @@ def test_scan_and_append():
         assert next(o for o in obs if o["type"] == "file_extension" and o["name"] == "py")[
             "source"] == "main.py", "extension source is deterministic"
 
-        # append writes one JSON line per observation
+        # append writes one JSON line per observation, then a session marker
         track.append_evidence(root, obs)
         lines = (root / ".ontrack" / "evidence.jsonl").read_text().strip().splitlines()
-        assert len(lines) == len(obs), (len(lines), len(obs))
+        assert len(lines) == len(obs) + 1, (len(lines), len(obs))
         assert all(json.loads(ln) for ln in lines), "every line is valid JSON"
+        marker = json.loads(lines[-1])
+        assert marker["type"] == "session", "last line is a session boundary marker"
+        assert marker["id"] == marker["detected_at"], "marker id is its timestamp"
+        assert "name" not in marker, "session marker carries no observation"
 
         # dedup is within-scan: no duplicate (type,name) pairs
         keys = [(o["type"], o["name"]) for o in obs]
