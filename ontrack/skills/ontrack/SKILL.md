@@ -13,8 +13,8 @@ know what the user knows — it asks. See `PLAN.md`.
 ## Steps
 
 1. Refresh the deterministic inventory first, so confirmed parent IDs are current
-   (this also validates any existing `questions.json` and advances the session
-   cursor in `.ontrack/state.json`):
+   (this also validates any existing `questions.json`, but does not advance the
+   session cursor yet):
    ```
    python "${CLAUDE_PLUGIN_ROOT}/skills/ontrack/build.py"
    ```
@@ -83,9 +83,9 @@ know what the user knows — it asks. See `PLAN.md`.
      strips `answer` before serving and grades server-side.
 
 4. Regenerate once more (merges concepts, validates the questions you authored,
-   advances the cursor):
+   then advances the cursor because authoring succeeded):
    ```
-   python "${CLAUDE_PLUGIN_ROOT}/skills/ontrack/build.py"
+   python "${CLAUDE_PLUGIN_ROOT}/skills/ontrack/build.py" --advance-cursor
    ```
    Stale evidence, orphaned concepts, and invalid/orphaned questions drop out.
 

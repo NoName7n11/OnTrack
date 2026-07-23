@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Self-check for build.py — run: python ontrack/skills/ontrack/test_build.py"""
 import json
+import os
+import sys
 import tempfile
 from pathlib import Path
 
@@ -13,6 +15,7 @@ def test_build_inventory():
         (root / "package.json").write_text('{"dependencies":{"react":"^18"}}')
         (root / "App.tsx").write_text("export {}")
         (root / "main.py").write_text("print(1)")
+        (root / "style.scss").write_text("$x: red;")
         (root / "notes.md").write_text("# hi")  # noise ext -> skipped
         # stale evidence: a dep that is NOT in any current manifest
         (root / ".ontrack").mkdir()
@@ -21,6 +24,7 @@ def test_build_inventory():
             '{"type":"dependency","name":"leftpad","source":"package.json","detected_at":"x"}\n'
             '{"type":"file_extension","name":"tsx","source":"App.tsx","detected_at":"x"}\n'
             '{"type":"file_extension","name":"py","source":"main.py","detected_at":"x"}\n'
+            '{"type":"file_extension","name":"scss","source":"style.scss","detected_at":"x"}\n'
             '{"type":"file_extension","name":"md","source":"notes.md","detected_at":"x"}\n')
 
         inv = build.build_inventory(root)
@@ -29,6 +33,7 @@ def test_build_inventory():
         assert "library:react" in by_id, by_id
         assert "language:typescript-react" in by_id, by_id  # .tsx
         assert "language:python" in by_id, by_id            # .py
+        assert "language:sass" in by_id, by_id              # .scss
         assert not any(i["kind"] == "language" and i["name"] == "Markdown" for i in inv["items"])
         # stale dep dropped: leftpad was in evidence but not in the repo now
         assert "library:leftpad" not in by_id, "stale evidence must not survive"
@@ -164,6 +169,9 @@ def test_validate_questions():
             # too few options -> dropped
             {"id": "q:bad/opts", "concept": "concept:auth/jwt", "domain": "security",
              "mode": "self_report", "prompt": "?", "options": ["only"]},
+            # non-string id -> dropped safely before sorting
+            {"id": 123, "concept": "concept:auth/jwt", "domain": "security",
+             "mode": "self_report", "prompt": "?", "options": ["a", "b"]},
             # bool answer must not pass as int
             {"id": "q:bad/bool", "concept": "concept:react/useeffect",
              "domain": "framework", "mode": "graded", "prompt": "?",
@@ -205,7 +213,19 @@ def test_cursor():
             '{"type":"session","id":"2026-07-21T10:00:00Z","detected_at":"2026-07-21T10:00:00Z"}\n')
         assert build.newest_session(root) == "2026-07-21T10:00:00Z", "picks the latest marker"
 
-        build.write_cursor(root, build.newest_session(root))
+        old_cwd, old_argv = os.getcwd(), sys.argv[:]
+        try:
+            os.chdir(root)
+            sys.argv = ["build.py"]
+            build.main()
+            assert build.read_cursor(root) is None, "plain build must not advance cursor"
+            sys.argv = ["build.py", "--advance-cursor"]
+            build.main()
+            assert build.read_cursor(root) == "2026-07-21T10:00:00Z"
+        finally:
+            os.chdir(old_cwd)
+            sys.argv = old_argv
+
         assert build.read_cursor(root) == "2026-07-21T10:00:00Z"
         # advancing to None is a no-op (nothing to process)
         build.write_cursor(root, None)

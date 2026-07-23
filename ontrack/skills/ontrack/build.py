@@ -35,7 +35,7 @@ EXT_LANG = {
     "c":    ("c", "C", "Low-level systems language", "c programming tutorial"),
     "html": ("html", "HTML", "Markup for web pages", "html tutorial"),
     "css":  ("css", "CSS", "Styling for web pages", "css tutorial"),
-    "s css": ("sass", "Sass", "CSS with variables and nesting", "sass scss tutorial"),
+    "scss": ("sass", "Sass", "CSS with variables and nesting", "sass scss tutorial"),
 }
 
 
@@ -152,7 +152,7 @@ def validate_questions(root, inventory_ids):
         mode = q.get("mode")
         domain = q.get("domain")
         options = q.get("options")
-        if not qid or qid in seen:
+        if not isinstance(qid, str) or not qid or qid in seen:
             continue
         if concept not in inventory_ids:
             continue
@@ -324,6 +324,7 @@ def write_inventory(root, inventory):
 
 def main():
     root = Path.cwd()
+    advance_cursor = "--advance-cursor" in sys.argv[1:]
     inv = build_inventory(root)
     changed = write_inventory(root, inv)
     state = "updated" if changed else "unchanged"
@@ -331,7 +332,8 @@ def main():
     inventory_ids = {it["id"] for it in inv["items"]}
     questions = validate_questions(root, inventory_ids)
     q_changed = write_questions(root, questions)
-    write_cursor(root, newest_session(root))
+    if advance_cursor:
+        write_cursor(root, newest_session(root))
 
     print(f"ontrack: inventory {state} - {len(inv['items'])} items; "
           f"questions {'updated' if q_changed else 'unchanged'} - {len(questions)}",
