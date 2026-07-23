@@ -94,6 +94,9 @@ def test_concept_merge():
             # bad domain on a concept -> domain omitted, concept still kept
             {"id": "concept:react/props", "name": "props", "parent": "library:react",
              "confidence": "inferred", "domain": "vibes", "where": ["App.tsx:1"]},
+            # non-string id -> dropped safely before ":" membership / sorting
+            {"id": 123, "name": "bad id", "parent": "library:react",
+             "confidence": "possible", "where": []},
             # possible confidence is kept; invalid level is dropped from the item
             {"id": "concept:react/suspense", "name": "Suspense",
              "parent": "library:react", "confidence": "possible", "level": "expert",
@@ -138,6 +141,8 @@ def test_concept_merge():
         # bad domain omitted but concept survives (has valid where)
         assert "concept:react/props" in by_id, "concept with bad domain still kept"
         assert "domain" not in by_id["concept:react/props"], "invalid domain omitted"
+        assert all(isinstance(i["id"], str) for i in inv["items"]), \
+            "non-string concept id dropped"
         # every concept points at a real confirmed parent
         conf = {i["id"] for i in inv["items"] if i["confidence"] == "confirmed"}
         for it in inv["items"]:
@@ -180,6 +185,10 @@ def test_validate_questions():
             {"id": "q:bad/noanswer", "concept": "concept:react/useeffect",
              "domain": "framework", "mode": "graded", "prompt": "?",
              "options": ["a", "b"]},
+            # graded placement without a valid level -> kept as optional, not placement
+            {"id": "q:bad/placement-level", "concept": "concept:react/useeffect",
+             "domain": "framework", "mode": "graded", "placement": True,
+             "prompt": "?", "options": ["a", "b"], "answer": 0},
             # bad domain -> dropped
             {"id": "q:bad/domain", "concept": "concept:auth/jwt", "domain": "vibes",
              "mode": "self_report", "prompt": "?", "options": ["a", "b"]},
@@ -198,12 +207,15 @@ def test_validate_questions():
 
         qs = build.validate_questions(root, inv_ids)
         by_id = {q["id"]: q for q in qs}
-        assert set(by_id) == {"q:react/useeffect", "q:auth/jwt"}, by_id
+        assert set(by_id) == {"q:react/useeffect", "q:auth/jwt",
+                              "q:bad/placement-level"}, by_id
         assert by_id["q:react/useeffect"]["answer"] == 0
         assert by_id["q:react/useeffect"]["level"] == "basic"
         assert by_id["q:react/useeffect"]["placement"] is True, "graded placement flag kept"
         assert "answer" not in by_id["q:auth/jwt"], "self_report has no answer key"
         assert "placement" not in by_id["q:auth/jwt"], "self_report cannot be placement"
+        assert "placement" not in by_id["q:bad/placement-level"], \
+            "placement requires a valid level"
         assert [q["id"] for q in qs] == sorted(q["id"] for q in qs), "id-sorted"
 
         # write-only-if-changed

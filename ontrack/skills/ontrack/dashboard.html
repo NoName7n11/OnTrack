@@ -131,7 +131,7 @@ const SELF_STATE = { "Confident":"learned", "Shaky":"review", "New":"learn" };
 
 // benchmark tuning — how much signal we need before trusting the quiz over the
 // declared level, and per-tier before a tier can promote you.
-const MIN_SIGNAL = 3;   // graded+tiered answers before the quiz overrides declared
+const MIN_SIGNAL = 3;   // placement graded+tiered answers before the quiz overrides declared
 const MIN_TIER = 2;     // answers within a tier before it can set the level
 
 let inventory = { items: [] };
@@ -187,12 +187,12 @@ function stateOf(q) {
   return SELF_STATE[a.self] || "review";
 }
 
-// derive the real level from graded, tiered answers — tier-ceiling: the hardest
-// tier you mostly get right wins; missing basics never demotes you.
+// derive the real level from placement graded, tiered answers — tier-ceiling:
+// the hardest tier you mostly get right wins; missing basics never demotes you.
 function derivedLevel() {
   const declared = personal.level || "beginner";
   const scored = questions.filter(q =>
-    q.mode === "graded" && q.level in TIER_RANK && personal.answers[q.id]);
+    q.placement && q.mode === "graded" && q.level in TIER_RANK && personal.answers[q.id]);
   if (scored.length < MIN_SIGNAL) {
     return { level: declared, provisional: true,
       why: "answer a few more placement questions to confirm — using your declared level for now." };

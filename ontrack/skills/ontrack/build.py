@@ -86,7 +86,7 @@ def _load_concepts(root, confirmed_ids):
         parent = c.get("parent")
         if conf not in CONCEPT_CONF:
             continue
-        if not cid or ":" not in cid:
+        if not isinstance(cid, str) or not cid or ":" not in cid:
             continue
         if parent not in confirmed_ids:
             continue  # orphan concept — its library/language is gone
@@ -194,7 +194,7 @@ def validate_questions(root, inventory_ids):
             item["level"] = q["level"]
         # Compulsory placement question — only meaningful when graded (needs a
         # correct/incorrect signal to score the user's level).
-        if q.get("placement") is True and mode == "graded":
+        if q.get("placement") is True and mode == "graded" and "level" in item:
             item["placement"] = True
         seen.add(qid)
         out.append(item)
