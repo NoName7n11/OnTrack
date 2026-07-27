@@ -1,5 +1,7 @@
 # OnTrack
 
+[![CI](https://github.com/NoName7n11/OnTrack/actions/workflows/ci.yml/badge.svg)](https://github.com/NoName7n11/OnTrack/actions/workflows/ci.yml)
+
 **Know what you built.**
 
 People build projects with AI agents (Claude Code, Codex) but often don't know
@@ -33,6 +35,21 @@ Then in any project, run `/ontrack` to scan the project, generate the questions,
 and open the dashboard. A `SessionEnd` hook records observations automatically.
 (Requires Python 3.11+ on PATH.)
 
+### Updating
+
+Installing a plugin copies it — a new release does **not** reach an existing
+install on its own. Run `/plugin` to see the version you actually have; if it is
+older than the current one, update it:
+
+```
+/plugin marketplace update ontrack
+/plugin uninstall ontrack@ontrack
+/plugin install ontrack@ontrack
+```
+
+Current version: **0.3.0**. Anything older is missing the fixes that keep your
+answers in the right project and out of git — update before testing.
+
 To hack on it locally without installing, load the plugin directly:
 
 ```
@@ -63,22 +80,32 @@ claude --plugin-dir ./ontrack
    level: things you got wrong always show; untested concepts appear filtered to
    your level (a Beginner sees basics + foundational prereqs, an Expert only
    advanced gaps). Each step has a one-line *what*, the *file:line* it's used in,
-   and a search link. Your level + answers save to `.ontrack/personal.json`
-   (private, git-ignored).
+   and a search link. Your level + answers save to `.ontrack/personal.json`,
+   which OnTrack keeps out of git for you (see below).
+
+Each project gets its own dashboard: if 3874 is already serving another project,
+OnTrack moves to 3875, 3876, … and prints the URL it actually bound. Use the
+printed one — answers always go to the project you are looking at.
 
 The graded answer key never reaches the browser — the server strips it and grades
 server-side.
 
 Data files, by owner:
 
-| File                      | Owner                     | Committed? |
-|---------------------------|---------------------------|------------|
-| `.ontrack/evidence.jsonl` | hook (observations)       | yes        |
-| `.ontrack/concepts.json`  | `/ontrack` (LLM)          | yes        |
-| `.ontrack/questions.json` | `/ontrack` (LLM)          | yes        |
-| `.ontrack/inventory.json` | `build.py` (derived)      | yes        |
-| `.ontrack/personal.json`  | you (level + answers)     | **no**     |
-| `.ontrack/state.json`     | `build.py` (resume cursor)| **no**     |
+| File                      | Owner                      | Committed? |
+|---------------------------|----------------------------|------------|
+| `.ontrack/evidence.jsonl` | hook (observations)        | yes        |
+| `.ontrack/concepts.json`  | `/ontrack` (LLM)           | yes        |
+| `.ontrack/questions.json` | `/ontrack` (LLM)           | yes        |
+| `.ontrack/inventory.json` | `build.py` (derived)       | yes        |
+| `.ontrack/.gitignore`     | `build.py` (written for you) | yes      |
+| `.ontrack/personal.json`  | you (level + answers)      | **no**     |
+| `.ontrack/state.json`     | `build.py` (resume cursor) | **no**     |
+
+You don't need to touch your own `.gitignore`: OnTrack writes a nested
+`.ontrack/.gitignore` that hides `personal.json` (your level and answers) and
+`state.json` (a per-machine cursor), while the shared project truth beside them
+still commits normally. Nothing outside `.ontrack/` is ever written.
 
 The project's tech **is** your knowledge map — that's why tracking the project
 tells you what you need to know.
@@ -92,14 +119,31 @@ alpha testing). From a project that already has an `.ontrack/` folder:
 python ontrack/skills/ontrack/server.py
 ```
 
-It serves the current directory's `.ontrack/` on `127.0.0.1:3874` (bumps the port
-if busy). Open the printed URL; `Ctrl-C` stops it. To replay the level prompt,
-reset your answers: overwrite `.ontrack/personal.json` with `{"answers":{}}`.
+It serves the current directory's `.ontrack/` on `127.0.0.1:3874`, moving to the
+next free port if that one is taken. Open the printed URL; `Ctrl-C` stops it. To
+replay the level prompt, reset your answers: overwrite `.ontrack/personal.json`
+with `{"answers":{}}`.
 
 To regenerate the data from scratch: run `ontrack/hooks/track.py` in the project
 (records evidence), then `ontrack/skills/ontrack/build.py` (builds inventory +
 validates questions). The concept/question authoring in between is the model's
 job — that's what `/ontrack` orchestrates.
+
+## Development
+
+No dependencies — the tests are stdlib Python and run directly:
+
+```
+python ontrack/hooks/test_track.py            # evidence capture + hook cwd guard
+python ontrack/skills/ontrack/test_build.py   # inventory, concepts, questions, cursor
+python ontrack/skills/ontrack/test_server.py  # grading, level, whitelist, answer stripping
+python tools/check_manifests.py               # manifests point at files that exist
+```
+
+CI runs all of these on Linux and Windows (Python 3.11 and 3.12) plus
+`claude plugin validate` for the plugin and the marketplace, on every push and PR.
+Before cutting a release, walk **[RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)** —
+it covers the data-safety checks and a manual smoke test that CI can't do.
 
 ## Design
 
