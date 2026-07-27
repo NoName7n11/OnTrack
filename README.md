@@ -16,6 +16,9 @@ material, and it doesn't guess your level — it derives it from your answers.
 > **Status:** alpha. The full loop works end-to-end — passive tracking, concept
 > inference, a placement quiz that derives your level, and a local dashboard that
 > turns the gaps into a level-pitched learning path.
+>
+> **Testing it? Start with [ALPHA_TESTING.md](ALPHA_TESTING.md)** — install steps,
+> what files get written, known limitations, and how to report what breaks.
 
 ## Install
 

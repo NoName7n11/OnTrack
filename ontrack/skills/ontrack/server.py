@@ -196,13 +196,26 @@ class Handler(BaseHTTPRequestHandler):
                          "answers": data.get("answers", {})})
 
 
+class _Server(ThreadingHTTPServer):
+    """Never share a port with another project's dashboard.
+
+    http.server defaults to allow_reuse_address = 1 (SO_REUSEADDR). On Windows
+    that lets a SECOND process bind a port another process is already serving:
+    both "own" 3874, the new one happily prints that URL, and answers land in
+    whichever project the OS routes to. Refusing to reuse makes the second bind
+    fail properly, so the port scan below moves on to 3875 and each project
+    keeps its own dashboard.
+    """
+    allow_reuse_address = False
+
+
 def run(root, template, port_start=PORT_START):
     root, template = Path(root), Path(template)
     handler = partial(Handler, root=root, template=template)
     last = None
     for port in range(port_start, port_start + PORT_TRIES):
         try:
-            httpd = ThreadingHTTPServer(("127.0.0.1", port), handler)
+            httpd = _Server(("127.0.0.1", port), handler)
         except OSError as e:
             last = e
             continue

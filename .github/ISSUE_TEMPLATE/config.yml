@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Alpha testing guide
+    url: https://github.com/NoName7n11/OnTrack/blob/main/ALPHA_TESTING.md
+    about: Install steps, what files OnTrack writes, and known limitations — check here first.
