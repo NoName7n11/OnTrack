@@ -1,0 +1,135 @@
+{
+  "questions": [
+    {
+      "id": "q:html/async-await",
+      "concept": "concept:html/async-await",
+      "domain": "framework",
+      "mode": "graded",
+      "prompt": "What does `await` do inside an async function?",
+      "options": [
+        "Pauses that function until the awaited Promise settles, without blocking the page",
+        "Blocks the whole browser until the Promise resolves",
+        "Converts a Promise into a synchronous callback"
+      ],
+      "answer": 0,
+      "level": "intermediate"
+    },
+    {
+      "id": "q:html/dom-manipulation",
+      "concept": "concept:html/dom-manipulation",
+      "domain": "framework",
+      "mode": "graded",
+      "prompt": "Which call fetches a single element by its id attribute?",
+      "options": [
+        "document.getElementById(\"app\")",
+        "document.querySelectorAll(\"#app\")",
+        "document.getElementsByClassName(\"app\")"
+      ],
+      "answer": 0,
+      "level": "basic",
+      "placement": true
+    },
+    {
+      "id": "q:html/fetch-api",
+      "concept": "concept:html/fetch-api",
+      "domain": "framework",
+      "mode": "graded",
+      "prompt": "fetch() returns a Promise that resolves to a Response. How do you get the JSON body?",
+      "options": [
+        "await res.json()",
+        "res.body directly",
+        "JSON.parse(res)"
+      ],
+      "answer": 0,
+      "level": "intermediate",
+      "placement": true
+    },
+    {
+      "id": "q:python/atomic-write",
+      "concept": "concept:python/atomic-write",
+      "domain": "system-design",
+      "mode": "graded",
+      "prompt": "How does the write-temp-then-os.replace pattern avoid a half-written file?",
+      "options": [
+        "os.replace swaps the file in atomically, so a reader sees either the old or the new file, never a partial one",
+        "It compresses the file so writes finish instantly",
+        "It locks the file for the duration of the write"
+      ],
+      "answer": 0,
+      "level": "intermediate"
+    },
+    {
+      "id": "q:python/http-server",
+      "concept": "concept:python/http-server",
+      "domain": "system-design",
+      "mode": "graded",
+      "prompt": "In http.server, where do you put the logic that runs for an incoming GET?",
+      "options": [
+        "Override do_GET on a BaseHTTPRequestHandler subclass",
+        "Pass a handler function to serve_forever()",
+        "Define a route decorator on the server class"
+      ],
+      "answer": 0,
+      "level": "intermediate",
+      "placement": true
+    },
+    {
+      "id": "q:python/localhost-bind",
+      "concept": "concept:python/localhost-bind",
+      "domain": "security",
+      "mode": "self_report",
+      "prompt": "How comfortable are you with why a file-writing dev server binds 127.0.0.1 instead of 0.0.0.0?",
+      "options": [
+        "Confident",
+        "Shaky",
+        "New"
+      ],
+      "level": "intermediate"
+    },
+    {
+      "id": "q:python/os-walk",
+      "concept": "concept:python/os-walk",
+      "domain": "language",
+      "mode": "graded",
+      "prompt": "How do you stop os.walk from descending into directories like node_modules?",
+      "options": [
+        "Mutate the dirnames list in place to remove them",
+        "Return early from the loop",
+        "Pass an exclude= argument to os.walk"
+      ],
+      "answer": 0,
+      "level": "basic",
+      "placement": true
+    },
+    {
+      "id": "q:python/server-side-grading",
+      "concept": "concept:python/server-side-grading",
+      "domain": "security",
+      "mode": "graded",
+      "prompt": "Why strip the `answer` key before sending questions.json to the browser?",
+      "options": [
+        "The client could read the correct answers from anything it receives, so grading must happen server-side",
+        "It reduces the JSON payload size",
+        "The browser cannot parse integer answer indexes"
+      ],
+      "answer": 0,
+      "level": "advanced",
+      "placement": true
+    },
+    {
+      "id": "q:python/threading-lock",
+      "concept": "concept:python/threading-lock",
+      "domain": "system-design",
+      "mode": "graded",
+      "prompt": "Why guard the personal.json read-modify-write with a threading.Lock?",
+      "options": [
+        "ThreadingHTTPServer handles requests concurrently, so two writes could interleave and corrupt the file",
+        "Locks make file writes faster",
+        "os.replace requires a held lock to be atomic"
+      ],
+      "answer": 0,
+      "level": "advanced",
+      "placement": true
+    }
+  ]
+}

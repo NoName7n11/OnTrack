@@ -326,6 +326,28 @@ def build_inventory(root):
     return {"items": unique}
 
 
+# Private, per-machine files that must never reach a user's git history.
+PRIVATE_FILES = ("personal.json", "state.json")
+
+
+def write_private_gitignore(root):
+    """Drop a .gitignore INSIDE .ontrack/ so private files self-ignore.
+
+    OnTrack runs in someone else's repo and cannot edit their root .gitignore.
+    A nested .gitignore needs no action from them: personal.json (their level and
+    answers) and state.json (machine cursor) stay out of git, while the shared
+    project truth next to them is still committed normally.
+    """
+    p = Path(root) / ".ontrack" / ".gitignore"
+    p.parent.mkdir(exist_ok=True)
+    body = ("# Written by OnTrack - private per-user state, never commit.\n"
+            + "".join(f"{name}\n" for name in PRIVATE_FILES))
+    if p.exists() and p.read_text(encoding="utf-8") == body:
+        return False
+    p.write_text(body, encoding="utf-8")
+    return True
+
+
 def write_inventory(root, inventory):
     """Write inventory.json only if content changed (avoid timestamp-free churn)."""
     out = Path(root) / ".ontrack" / "inventory.json"
@@ -343,6 +365,7 @@ def main():
     inv = build_inventory(root)
     changed = write_inventory(root, inv)
     state = "updated" if changed else "unchanged"
+    write_private_gitignore(root)  # keep answers/cursor out of the user's repo
 
     inventory_ids = {it["id"] for it in inv["items"]}
     questions = validate_questions(root, inventory_ids)

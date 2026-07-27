@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  tests:
+    name: tests (${{ matrix.os }}, py${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows is not optional here: this project has repeatedly hit
+        # Windows-only footguns (console encoding, path separators, stdin).
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Hook tests (evidence capture + cwd guard)
+        run: python ontrack/hooks/test_track.py
+
+      - name: Build tests (inventory, concepts, questions, cursor)
+        run: python ontrack/skills/ontrack/test_build.py
+
+      - name: Server tests (grading, level, whitelist, answer stripping)
+        run: python ontrack/skills/ontrack/test_server.py
+
+  manifests:
+    name: plugin + marketplace validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Stdlib check: everything the manifests point at actually exists.
+      - name: Structural manifest check
+        run: python tools/check_manifests.py
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Validate plugin manifest
+        run: claude plugin validate ./ontrack
+
+      - name: Validate marketplace manifest
+        run: claude plugin validate .

@@ -229,6 +229,22 @@ def test_validate_questions():
     print("ok: questions validated (orphans/bad-answer/domain/options dropped)")
 
 
+def test_private_gitignore():
+    """.ontrack/.gitignore must keep private files out of a user's repo."""
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        assert build.write_private_gitignore(root) is True, "first write happens"
+        assert build.write_private_gitignore(root) is False, "no churn when unchanged"
+        body = (root / ".ontrack" / ".gitignore").read_text(encoding="utf-8")
+        for name in ("personal.json", "state.json"):
+            assert name in body.splitlines(), f"{name} must be ignored"
+        # shared project truth must NOT be ignored - it is meant to be committed
+        for name in ("inventory.json", "concepts.json", "questions.json",
+                     "evidence.jsonl"):
+            assert name not in body, f"{name} must stay committable"
+    print("ok: .ontrack/.gitignore hides private files, keeps project truth committable")
+
+
 def test_cursor():
     with tempfile.TemporaryDirectory() as d:
         root = Path(d)
@@ -269,4 +285,5 @@ if __name__ == "__main__":
     test_build_inventory()
     test_concept_merge()
     test_validate_questions()
+    test_private_gitignore()
     test_cursor()

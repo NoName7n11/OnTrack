@@ -1,0 +1,83 @@
+{
+  "concepts": [
+    { "id": "concept:python/os-walk", "name": "os.walk directory scan",
+      "parent": "language:python", "confidence": "inferred", "level": "basic",
+      "domain": "language", "what": "Recursively walk a directory tree, pruning skip dirs",
+      "where": ["ontrack/hooks/track.py:104"], "search": "python os.walk tutorial" },
+
+    { "id": "concept:python/json-serialization", "name": "JSON read/write",
+      "parent": "language:python", "confidence": "inferred", "level": "basic",
+      "domain": "language", "what": "Serialize/parse data with the json module",
+      "where": ["ontrack/hooks/track.py:140", "ontrack/skills/ontrack/build.py:151"],
+      "search": "python json module tutorial" },
+
+    { "id": "concept:python/pathlib", "name": "pathlib paths",
+      "parent": "language:python", "confidence": "inferred", "level": "basic",
+      "domain": "language", "what": "Object-oriented filesystem paths",
+      "where": ["ontrack/skills/ontrack/build.py:13", "ontrack/skills/ontrack/server.py:23"],
+      "search": "python pathlib tutorial" },
+
+    { "id": "concept:python/http-server", "name": "http.server handler",
+      "parent": "language:python", "confidence": "inferred", "level": "intermediate",
+      "domain": "system-design", "what": "Serve HTTP with BaseHTTPRequestHandler / ThreadingHTTPServer",
+      "where": ["ontrack/skills/ontrack/server.py:132", "ontrack/skills/ontrack/server.py:194"],
+      "search": "python http.server BaseHTTPRequestHandler tutorial" },
+
+    { "id": "concept:python/atomic-write", "name": "Atomic file write",
+      "parent": "language:python", "confidence": "inferred", "level": "intermediate",
+      "domain": "system-design", "what": "Write to a temp file then os.replace for atomicity",
+      "where": ["ontrack/skills/ontrack/server.py:43"],
+      "search": "python atomic file write os.replace" },
+
+    { "id": "concept:python/threading-lock", "name": "threading Lock",
+      "parent": "language:python", "confidence": "inferred", "level": "advanced",
+      "domain": "system-design", "what": "Guard shared state against concurrent request threads",
+      "where": ["ontrack/skills/ontrack/server.py:74"],
+      "search": "python threading Lock tutorial" },
+
+    { "id": "concept:python/server-side-grading", "name": "Server-side answer grading",
+      "parent": "language:python", "confidence": "inferred", "level": "intermediate",
+      "domain": "security", "what": "Strip the answer key before serving; grade on the server",
+      "where": ["ontrack/skills/ontrack/server.py:60", "ontrack/skills/ontrack/server.py:115"],
+      "search": "why grade quiz answers server side security" },
+
+    { "id": "concept:python/localhost-bind", "name": "Localhost-only bind",
+      "parent": "language:python", "confidence": "inferred", "level": "intermediate",
+      "domain": "security", "what": "Bind 127.0.0.1 so a file-writing endpoint never faces the network",
+      "where": ["ontrack/skills/ontrack/server.py:200"],
+      "search": "bind 127.0.0.1 localhost only python server" },
+
+    { "id": "concept:python/basics", "name": "Python basics",
+      "parent": "language:python", "confidence": "foundational", "level": "basic",
+      "domain": "language", "what": "Variables, functions, control flow, dicts/lists",
+      "search": "python for beginners" },
+
+    { "id": "concept:python/http-basics", "name": "HTTP request/response",
+      "parent": "language:python", "confidence": "foundational", "level": "basic",
+      "domain": "system-design", "what": "GET/POST, status codes, headers, request body",
+      "search": "how http works beginners" },
+
+    { "id": "concept:html/fetch-api", "name": "fetch API",
+      "parent": "language:html", "confidence": "inferred", "level": "intermediate",
+      "domain": "framework", "what": "Call the server's JSON endpoints from the browser",
+      "where": ["ontrack/skills/ontrack/dashboard.html:146", "ontrack/skills/ontrack/dashboard.html:161"],
+      "search": "javascript fetch api tutorial" },
+
+    { "id": "concept:html/async-await", "name": "async/await",
+      "parent": "language:html", "confidence": "inferred", "level": "intermediate",
+      "domain": "framework", "what": "Await async fetches without callback nesting",
+      "where": ["ontrack/skills/ontrack/dashboard.html:144", "ontrack/skills/ontrack/dashboard.html:160"],
+      "search": "javascript async await tutorial" },
+
+    { "id": "concept:html/dom-manipulation", "name": "DOM manipulation",
+      "parent": "language:html", "confidence": "inferred", "level": "basic",
+      "domain": "framework", "what": "Build the UI with getElementById / event listeners",
+      "where": ["ontrack/skills/ontrack/dashboard.html:231", "ontrack/skills/ontrack/dashboard.html:336"],
+      "search": "javascript dom manipulation tutorial" },
+
+    { "id": "concept:html/basics", "name": "HTML basics",
+      "parent": "language:html", "confidence": "foundational", "level": "basic",
+      "domain": "framework", "what": "Elements, attributes, structure of a page",
+      "search": "html for beginners" }
+  ]
+}

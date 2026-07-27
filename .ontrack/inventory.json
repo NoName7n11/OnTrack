@@ -1,0 +1,249 @@
+{
+  "items": [
+    {
+      "id": "concept:html/async-await",
+      "name": "async/await",
+      "kind": "concept",
+      "parent": "language:html",
+      "confidence": "inferred",
+      "what": "Await async fetches without callback nesting",
+      "where": [
+        "ontrack/skills/ontrack/dashboard.html:144",
+        "ontrack/skills/ontrack/dashboard.html:160"
+      ],
+      "search": "javascript async await tutorial",
+      "from": [],
+      "level": "intermediate",
+      "domain": "framework"
+    },
+    {
+      "id": "concept:html/basics",
+      "name": "HTML basics",
+      "kind": "concept",
+      "parent": "language:html",
+      "confidence": "foundational",
+      "what": "Elements, attributes, structure of a page",
+      "where": [],
+      "search": "html for beginners",
+      "from": [],
+      "level": "basic",
+      "domain": "framework"
+    },
+    {
+      "id": "concept:html/dom-manipulation",
+      "name": "DOM manipulation",
+      "kind": "concept",
+      "parent": "language:html",
+      "confidence": "inferred",
+      "what": "Build the UI with getElementById / event listeners",
+      "where": [
+        "ontrack/skills/ontrack/dashboard.html:231",
+        "ontrack/skills/ontrack/dashboard.html:336"
+      ],
+      "search": "javascript dom manipulation tutorial",
+      "from": [],
+      "level": "basic",
+      "domain": "framework"
+    },
+    {
+      "id": "concept:html/fetch-api",
+      "name": "fetch API",
+      "kind": "concept",
+      "parent": "language:html",
+      "confidence": "inferred",
+      "what": "Call the server's JSON endpoints from the browser",
+      "where": [
+        "ontrack/skills/ontrack/dashboard.html:146",
+        "ontrack/skills/ontrack/dashboard.html:161"
+      ],
+      "search": "javascript fetch api tutorial",
+      "from": [],
+      "level": "intermediate",
+      "domain": "framework"
+    },
+    {
+      "id": "concept:python/atomic-write",
+      "name": "Atomic file write",
+      "kind": "concept",
+      "parent": "language:python",
+      "confidence": "inferred",
+      "what": "Write to a temp file then os.replace for atomicity",
+      "where": [
+        "ontrack/skills/ontrack/server.py:43"
+      ],
+      "search": "python atomic file write os.replace",
+      "from": [],
+      "level": "intermediate",
+      "domain": "system-design"
+    },
+    {
+      "id": "concept:python/basics",
+      "name": "Python basics",
+      "kind": "concept",
+      "parent": "language:python",
+      "confidence": "foundational",
+      "what": "Variables, functions, control flow, dicts/lists",
+      "where": [],
+      "search": "python for beginners",
+      "from": [],
+      "level": "basic",
+      "domain": "language"
+    },
+    {
+      "id": "concept:python/http-basics",
+      "name": "HTTP request/response",
+      "kind": "concept",
+      "parent": "language:python",
+      "confidence": "foundational",
+      "what": "GET/POST, status codes, headers, request body",
+      "where": [],
+      "search": "how http works beginners",
+      "from": [],
+      "level": "basic",
+      "domain": "system-design"
+    },
+    {
+      "id": "concept:python/http-server",
+      "name": "http.server handler",
+      "kind": "concept",
+      "parent": "language:python",
+      "confidence": "inferred",
+      "what": "Serve HTTP with BaseHTTPRequestHandler / ThreadingHTTPServer",
+      "where": [
+        "ontrack/skills/ontrack/server.py:132",
+        "ontrack/skills/ontrack/server.py:194"
+      ],
+      "search": "python http.server BaseHTTPRequestHandler tutorial",
+      "from": [],
+      "level": "intermediate",
+      "domain": "system-design"
+    },
+    {
+      "id": "concept:python/json-serialization",
+      "name": "JSON read/write",
+      "kind": "concept",
+      "parent": "language:python",
+      "confidence": "inferred",
+      "what": "Serialize/parse data with the json module",
+      "where": [
+        "ontrack/hooks/track.py:140",
+        "ontrack/skills/ontrack/build.py:151"
+      ],
+      "search": "python json module tutorial",
+      "from": [],
+      "level": "basic",
+      "domain": "language"
+    },
+    {
+      "id": "concept:python/localhost-bind",
+      "name": "Localhost-only bind",
+      "kind": "concept",
+      "parent": "language:python",
+      "confidence": "inferred",
+      "what": "Bind 127.0.0.1 so a file-writing endpoint never faces the network",
+      "where": [
+        "ontrack/skills/ontrack/server.py:200"
+      ],
+      "search": "bind 127.0.0.1 localhost only python server",
+      "from": [],
+      "level": "intermediate",
+      "domain": "security"
+    },
+    {
+      "id": "concept:python/os-walk",
+      "name": "os.walk directory scan",
+      "kind": "concept",
+      "parent": "language:python",
+      "confidence": "inferred",
+      "what": "Recursively walk a directory tree, pruning skip dirs",
+      "where": [
+        "ontrack/hooks/track.py:104"
+      ],
+      "search": "python os.walk tutorial",
+      "from": [],
+      "level": "basic",
+      "domain": "language"
+    },
+    {
+      "id": "concept:python/pathlib",
+      "name": "pathlib paths",
+      "kind": "concept",
+      "parent": "language:python",
+      "confidence": "inferred",
+      "what": "Object-oriented filesystem paths",
+      "where": [
+        "ontrack/skills/ontrack/build.py:13",
+        "ontrack/skills/ontrack/server.py:23"
+      ],
+      "search": "python pathlib tutorial",
+      "from": [],
+      "level": "basic",
+      "domain": "language"
+    },
+    {
+      "id": "concept:python/server-side-grading",
+      "name": "Server-side answer grading",
+      "kind": "concept",
+      "parent": "language:python",
+      "confidence": "inferred",
+      "what": "Strip the answer key before serving; grade on the server",
+      "where": [
+        "ontrack/skills/ontrack/server.py:60",
+        "ontrack/skills/ontrack/server.py:115"
+      ],
+      "search": "why grade quiz answers server side security",
+      "from": [],
+      "level": "intermediate",
+      "domain": "security"
+    },
+    {
+      "id": "concept:python/threading-lock",
+      "name": "threading Lock",
+      "kind": "concept",
+      "parent": "language:python",
+      "confidence": "inferred",
+      "what": "Guard shared state against concurrent request threads",
+      "where": [
+        "ontrack/skills/ontrack/server.py:74"
+      ],
+      "search": "python threading Lock tutorial",
+      "from": [],
+      "level": "advanced",
+      "domain": "system-design"
+    },
+    {
+      "id": "language:html",
+      "name": "HTML",
+      "kind": "language",
+      "confidence": "confirmed",
+      "what": "Markup for web pages",
+      "where": [
+        "ontrack/skills/ontrack/dashboard.html"
+      ],
+      "search": "html tutorial",
+      "from": [
+        {
+          "type": "file_extension",
+          "name": "html"
+        }
+      ]
+    },
+    {
+      "id": "language:python",
+      "name": "Python",
+      "kind": "language",
+      "confidence": "confirmed",
+      "what": "Python programming language",
+      "where": [
+        "ontrack/hooks/test_track.py"
+      ],
+      "search": "python tutorial",
+      "from": [
+        {
+          "type": "file_extension",
+          "name": "py"
+        }
+      ]
+    }
+  ]
+}

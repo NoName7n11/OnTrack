@@ -1,0 +1,116 @@
+name: Alpha bug report
+description: Something broke, or the concepts / questions / path were wrong
+title: "[bug] "
+labels: ["bug", "alpha"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing OnTrack. Skip anything that doesn't apply.
+
+        Safe to attach: `.ontrack/concepts.json`, `.ontrack/questions.json`.
+        **Don't** attach `.ontrack/personal.json` — those are your answers.
+
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: Windows 11 / macOS 14 / Ubuntu 24.04
+    validations:
+      required: true
+
+  - type: input
+    id: claude_version
+    attributes:
+      label: Claude Code version
+      description: Run `claude --version`
+      placeholder: "2.0.x"
+    validations:
+      required: true
+
+  - type: input
+    id: ontrack_version
+    attributes:
+      label: OnTrack plugin version
+      description: Shown by `/plugin`. Please confirm you are on 0.2.0 or newer.
+      placeholder: "0.2.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: project_type
+    attributes:
+      label: Project type
+      multiple: true
+      options:
+        - React / frontend
+        - Python backend or script
+        - Node / Express / API
+        - Full-stack
+        - CLI tool
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Where did it break?
+      options:
+        - Install (marketplace / plugin install)
+        - Running /ontrack
+        - Dashboard did not open
+        - Answering questions
+        - The learning path
+        - Files written / git surprises
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened
+      description: What you expected, what you got. Paste the exact error if there was one.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: dashboard_opened
+    attributes:
+      label: Did the dashboard open?
+      options:
+        - "Yes"
+        - "No"
+        - "It opened but showed the wrong project's data"
+        - "Did not get that far"
+    validations:
+      required: true
+
+  - type: textarea
+    id: bad_concepts
+    attributes:
+      label: Wrong or missing concepts
+      description: Did it name things your project doesn't use, or miss things it does?
+
+  - type: textarea
+    id: bad_questions
+    attributes:
+      label: Wrong, unfair, or trick questions
+      description: Paste the question and what was wrong with it.
+
+  - type: textarea
+    id: level_and_path
+    attributes:
+      label: Level and learning path
+      description: >
+        What level did it place you at, and did that feel fair? Was the path
+        useful, too long, too short, or off-topic?
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Before submitting
+      options:
+        - label: I have not pasted anything secret (tokens, keys, private source)
+          required: true
