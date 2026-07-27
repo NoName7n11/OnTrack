@@ -144,23 +144,46 @@ def append_evidence(root, observations):
 
 
 def _cwd_from_stdin():
-    """Claude Code passes a JSON payload on stdin; use its cwd if present."""
+    """Resolve the project root from Claude Code's SessionEnd payload on stdin.
+
+    Guard: a hook that guesses its root writes evidence into whatever directory
+    the process happened to start in — which can be an unrelated project. So we
+    only fall back to the process cwd when NO payload was supplied (a tty, or
+    empty stdin — the standalone/test path). A payload that is present but
+    malformed, or names a cwd that isn't a directory, raises instead of guessing.
+    """
     if sys.stdin.isatty():
         return os.getcwd()
+    raw = sys.stdin.read()
+    if not raw.strip():
+        return os.getcwd()  # no payload at all — standalone run
     try:
-        payload = json.load(sys.stdin)
-        return payload.get("cwd") or os.getcwd()
-    except (json.JSONDecodeError, ValueError):
-        return os.getcwd()
+        payload = json.loads(raw)
+    except (json.JSONDecodeError, ValueError) as e:
+        raise ValueError(f"unreadable SessionEnd payload on stdin: {e}") from e
+    if not isinstance(payload, dict):
+        raise ValueError("SessionEnd payload must be a JSON object")
+    cwd = payload.get("cwd")
+    if cwd is None:
+        return os.getcwd()  # payload parsed but said nothing about cwd
+    if not isinstance(cwd, str) or not os.path.isdir(cwd):
+        raise ValueError(f"payload cwd is not an existing directory: {cwd!r}")
+    return cwd
 
 
 def main():
-    root = _cwd_from_stdin()
+    try:
+        root = _cwd_from_stdin()
+    except ValueError as e:
+        # Write nothing rather than risk polluting an unrelated project.
+        print(f"ontrack: skipped - {e}", file=sys.stderr)
+        return 1
     obs = scan_project(root)
     append_evidence(root, obs)
     # Hooks stay quiet on success; a short note is fine on stderr.
     print(f"ontrack: recorded {len(obs)} observations", file=sys.stderr)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
