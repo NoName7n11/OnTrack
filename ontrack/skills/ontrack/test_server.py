@@ -192,6 +192,10 @@ def test_http_get_whitelist():
             for path in ("/inventory.json", "/personal.json", "/questions.json"):
                 status, body = get(path)
                 assert status == 200 and json.loads(body) is not None, (path, status)
+            # browsers ask for this unprompted -> 204, empty body, no 404 noise
+            status, body = get("/favicon.ico")
+            assert status == 204, status
+            assert body == b"", "204 carries no body"
             for path in ("/secret.txt", "/../secret.txt", "/../../etc/passwd",
                          "/.ontrack/evidence.jsonl", "/nope"):
                 status, body = get(path)

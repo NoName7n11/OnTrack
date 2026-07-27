@@ -161,6 +161,11 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/personal.json":
             self._json(200, load_json(self.root / ".ontrack" / "personal.json",
                                       {"answers": {}}))
+        elif self.path == "/favicon.ico":
+            # Browsers request this unprompted; 204 (No Content) answers it
+            # without a body and without logging a 404 in the console.
+            self.send_response(204)
+            self.end_headers()
         else:
             self._send(404, "not found", "text/plain")  # whitelist only
 
