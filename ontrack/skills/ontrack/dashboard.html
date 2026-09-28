@@ -89,6 +89,25 @@
   .optnote button { font:inherit; font-size:13px; color:var(--accent); background:none; border:none;
                     cursor:pointer; text-decoration:underline; padding:0; }
 
+  /* Question cards render inside .gv (post-intake) only — pin them to the
+     dark-only palette so a light OS theme can't put a light card in the
+     dark dashboard. .gv already defines --gv-*; reuse it here instead of
+     the page's light/dark-toggle --raise/--paper/--ink/--line variables. */
+  .gv .qcard { background:var(--gv-panel); border-color:var(--gv-border2); }
+  .gv .badge { color:inherit; }
+  .gv .b-dom { color:var(--gv-accent); } .gv .b-mode { color:var(--gv-purple); }
+  .gv .b-sr { color:var(--gv-faint); } .gv .b-tier { color:var(--gv-review); }
+  .gv .qp { color:var(--gv-text); }
+  .gv .opt { border-color:var(--gv-border2); background:var(--gv-well); color:var(--gv-text2); }
+  .gv .opt:hover { border-color:var(--gv-accent); }
+  .gv .opt .r { border-color:var(--gv-border2); }
+  .gv .opt.sel { border-color:var(--gv-accent); background:var(--gv-accent-soft); }
+  .gv .opt.sel .r { border-color:var(--gv-accent); background:radial-gradient(var(--gv-accent) 0 4px, transparent 5px); }
+  .gv .note { color:var(--gv-text2); background:var(--gv-well); border-color:var(--gv-border2); }
+  .gv .qsend { background:var(--gv-accent); }
+  .gv .qskip { color:var(--gv-faint); }
+  .gv .done { color:var(--gv-faint); font-size:13px; margin-top:6px; }
+
   .gv-statbar { background:#1c2b3a; border-bottom:2px solid var(--gv-accent);
     display:flex; align-items:center; gap:16px; height:44px; padding:0 24px; }
   .gv-pill { background:var(--gv-accent); color:#fff; font:600 11px var(--mono);
