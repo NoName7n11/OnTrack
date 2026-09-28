@@ -94,11 +94,14 @@ Nothing outside `.ontrack/` is ever written.
 
 ## 5. Known limitations (don't report these)
 
-- **Config files without an extension are not detected** — `Dockerfile`, `Makefile`,
-  `Procfile` and similar never appear in the inventory.
-- **Commands you run are not recorded.** Only manifests and file extensions.
-- **Manifests covered:** `package.json`, `requirements.txt`, `pyproject.toml`.
-  Cargo, go.mod, Gemfile, composer.json are **not** parsed yet.
+- **Config files covered:** `Dockerfile`, `Makefile`, `Procfile`, `Vagrantfile`,
+  `Rakefile`, `Jenkinsfile` (exact filename match). Others without an extension
+  are still invisible to the scan.
+- **Commands you run are not recorded.** Only manifests, file extensions, and the
+  config filenames above.
+- **Manifests covered:** `package.json`, `requirements.txt`, `pyproject.toml`,
+  `Cargo.toml`, `go.mod`, `Gemfile`, `composer.json`. Others (e.g. `pom.xml`,
+  `*.csproj`) are **not** parsed yet.
 - **The quiz is generated per project**, so quality varies with how readable your
   code is. Bad questions *are* worth reporting (see below).
 - **The dashboard is local-only**, bound to `127.0.0.1`. No accounts, no sync,

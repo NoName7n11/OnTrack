@@ -17,17 +17,38 @@ def test_scan_and_append():
         (root / "requirements.txt").write_text("flask>=2.0  # web\njsonwebtoken\n")
         (root / "pyproject.toml").write_text(
             '[project]\ndependencies = ["requests>=2.0", "rich"]\n')
+        (root / "Cargo.toml").write_text(
+            '[dependencies]\nserde = "1.0"\n[dev-dependencies]\ncriterion = "0.5"\n')
+        (root / "go.mod").write_text(
+            "module example.com/foo\n\ngo 1.21\n\nrequire (\n"
+            "\tgithub.com/gin-gonic/gin v1.9.0\n)\n\nrequire golang.org/x/text v0.3.0\n")
+        (root / "Gemfile").write_text(
+            'source "https://rubygems.org"\ngem "rails", "~> 7.0"\ngem \'pg\'\n')
+        (root / "composer.json").write_text(json.dumps({
+            "require": {"php": ">=8.0", "laravel/framework": "^10.0"},
+            "require-dev": {"phpunit/phpunit": "^10.0"},
+        }))
         (root / "App.tsx").write_text("export {}")
         (root / "main.py").write_text("print(1)")
+        (root / "Dockerfile").write_text("FROM python:3.12\n")
+        (root / "Makefile").write_text("all:\n\techo hi\n")
         # noise that must be skipped
         (root / "node_modules").mkdir()
         (root / "node_modules" / "package.json").write_text('{"dependencies":{"junk":"1"}}')
+        (root / "node_modules" / "Dockerfile").write_text("FROM junk\n")
 
         obs = track.scan_project(root)
         deps = {o["name"] for o in obs if o["type"] == "dependency"}
         exts = {o["name"] for o in obs if o["type"] == "file_extension"}
+        configs = {o["name"] for o in obs if o["type"] == "tool_config"}
 
-        assert {"react", "vite", "flask", "jsonwebtoken", "requests", "rich"} <= deps, deps
+        assert {"react", "vite", "flask", "jsonwebtoken", "requests", "rich",
+                "serde", "criterion", "github.com/gin-gonic/gin", "golang.org/x/text",
+                "rails", "pg", "laravel/framework", "phpunit/phpunit"} <= deps, deps
+        assert "php" not in deps, "php pseudo-package must be excluded"
+        assert configs == {"Dockerfile", "Makefile"}, configs
+        assert next(o for o in obs if o["type"] == "tool_config" and o["name"] == "Dockerfile")[
+            "source"] == "Dockerfile", "node_modules Dockerfile must be skipped"
         assert "junk" not in deps, "node_modules must be skipped"
         assert {"tsx", "py", "json", "txt", "toml"} <= exts, exts
         assert all("confidence" not in o for o in obs), "observations carry no confidence"

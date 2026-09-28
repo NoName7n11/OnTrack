@@ -38,6 +38,17 @@ EXT_LANG = {
     "scss": ("sass", "Sass", "CSS with variables and nesting", "sass scss tutorial"),
 }
 
+# No-extension config files worth surfacing as "tooling to learn" (same shape
+# as EXT_LANG: id, label, what, search). Filenames match track.CONFIG_FILES.
+CONFIG_TOOL = {
+    "Dockerfile":   ("docker", "Docker", "Container build definition", "docker tutorial"),
+    "Makefile":     ("make", "Make", "Build automation via a Makefile", "makefile tutorial"),
+    "Procfile":     ("procfile", "Procfile", "Process types for platforms like Heroku", "procfile heroku tutorial"),
+    "Vagrantfile":  ("vagrant", "Vagrant", "Reproducible dev VM definition", "vagrant tutorial"),
+    "Rakefile":     ("rake", "Rake", "Ruby build automation via a Rakefile", "rakefile tutorial"),
+    "Jenkinsfile":  ("jenkins", "Jenkins", "CI/CD pipeline as code", "jenkinsfile tutorial"),
+}
+
 
 # inferred/possible = code-detected concepts; foundational = a prerequisite of a
 # detected library/language (e.g. "Python basics"), NOT pinpointed in code, so it
@@ -310,6 +321,21 @@ def build_inventory(root):
                 "where": [o["source"]],
                 "search": search,
                 "from": provenance("file_extension", o["name"]),
+            })
+        elif o["type"] == "tool_config":
+            mapped = CONFIG_TOOL.get(o["name"])
+            if not mapped:
+                continue  # skip noise (shouldn't happen, CONFIG_FILES is exact)
+            tool_id, label, what, search = mapped
+            items.append({
+                "id": f"tool:{tool_id}",
+                "name": label,
+                "kind": "tool",
+                "confidence": "confirmed",
+                "what": what,
+                "where": [o["source"]],
+                "search": search,
+                "from": provenance("tool_config", o["name"]),
             })
 
     # Merge the LLM-authored concept layer (inferred/possible), validated against

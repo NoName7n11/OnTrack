@@ -72,13 +72,96 @@ def _deps_from_pyproject(path):
     return names
 
 
-# manifest filename -> (parser, source label)
+def _deps_from_cargo_toml(path):
+    try:
+        import tomllib
+    except ModuleNotFoundError:
+        return []
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, Exception):  # tomllib.TOMLDecodeError subclasses Exception
+        return []
+    names = []
+    for key in ("dependencies", "dev-dependencies", "build-dependencies"):
+        table = data.get(key) or {}
+        names.extend(table.keys())
+    return names
+
+
+def _deps_from_go_mod(path):
+    # ponytail: line scan, not a full go.mod grammar — module paths only, good enough.
+    names = []
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return names
+    in_block = False
+    for line in lines:
+        line = line.split("//", 1)[0].strip()
+        if not line:
+            continue
+        if line.startswith("require") and line.endswith("("):
+            in_block = True
+            continue
+        if in_block and line == ")":
+            in_block = False
+            continue
+        if in_block:
+            parts = line.split()
+        elif line.startswith("require "):
+            parts = line[len("require "):].split()
+        else:
+            continue
+        if parts:
+            names.append(parts[0])
+    return names
+
+
+def _deps_from_gemfile(path):
+    import re
+    names = []
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return names
+    for line in lines:
+        line = line.split("#", 1)[0].strip()
+        m = re.match(r"""gem\s+['"]([^'"]+)['"]""", line)
+        if m:
+            names.append(m.group(1))
+    return names
+
+
+def _deps_from_composer_json(path):
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return []
+    names = []
+    for key in ("require", "require-dev"):
+        for name in (data.get(key) or {}).keys():
+            if name == "php" or name.startswith("ext-"):
+                continue  # pseudo-packages, not real dependencies
+            names.append(name)
+    return names
+
+
+# manifest filename -> parser
 MANIFESTS = {
     "package.json": _deps_from_package_json,
     "requirements.txt": _deps_from_requirements,
     "pyproject.toml": _deps_from_pyproject,
+    "Cargo.toml": _deps_from_cargo_toml,
+    "go.mod": _deps_from_go_mod,
+    "Gemfile": _deps_from_gemfile,
+    "composer.json": _deps_from_composer_json,
 }
-# ponytail: Cargo.toml / go.mod parsers are one more function each, add when needed.
+
+# Config files with no extension (p.suffix misses these entirely) worth
+# surfacing as tooling evidence. Exact filename match, case-sensitive.
+CONFIG_FILES = {
+    "Dockerfile", "Makefile", "Procfile", "Vagrantfile", "Rakefile", "Jenkinsfile",
+}
 
 
 def scan_project(root):
@@ -101,24 +184,32 @@ def scan_project(root):
 
     # Dependencies from manifests (search whole tree, not just root).
     ext_sources = {}
+    config_sources = {}
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
         for fn in sorted(filenames):
             p = Path(dirpath) / fn
+            rel = str(p.relative_to(root)).replace(os.sep, "/")
             if fn in MANIFESTS:
-                rel = str(p.relative_to(root)).replace(os.sep, "/")
                 for name in MANIFESTS[fn](p):
                     add({"type": "dependency", "name": name,
                          "source": rel, "detected_at": now})
+            if fn in CONFIG_FILES:
+                config_sources.setdefault(fn, rel)
             ext = p.suffix.lower().lstrip(".")
             if ext:
-                rel = str(p.relative_to(root)).replace(os.sep, "/")
                 ext_sources.setdefault(ext, rel)
 
     # One observation per distinct extension (first file seen as source).
     for ext in sorted(ext_sources):
         src = ext_sources[ext]
         add({"type": "file_extension", "name": ext,
+             "source": src, "detected_at": now})
+
+    # One observation per distinct no-extension config file (Dockerfile, etc).
+    for fn in sorted(config_sources):
+        src = config_sources[fn]
+        add({"type": "tool_config", "name": fn,
              "source": src, "detected_at": now})
 
     return obs
