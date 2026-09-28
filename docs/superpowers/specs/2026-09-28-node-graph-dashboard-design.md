@@ -10,17 +10,27 @@ POSTs to `/level` and `/answer`. No build step, no dependency.
 This replaces the post-intake view with a 3-panel layout per the user's sketch:
 
 ```
-+----------------------------------+------+
++-----------------------------------+------+
 |                                   |      |
 |           Node_Graph              | Tools|
 |                                   |      |
 +-----------------------------------+      |
-|           Questions                |      |
-+----------------------------------+------+
+|           Questions               |      |
++-----------------------------------+------+
 ```
 
 Level intake (the "Set your level" first-run screen) is unchanged — this
 rework applies once `personal.level` is set.
+
+A Figma reference now exists for this layout:
+https://www.figma.com/design/cAfSVmxMUZJebm4Nkalf4X/Principles?node-id=63-25&m=dev
+(node `63:25`, "Desktop - 3"). It supersedes the ASCII sketch above for visual
+detail — dark theme, specific palette, and a few elements not in the original
+sketch (a stat bar, a persistent node-detail card, grouped tools with version/
+detection status). See the companion agent prompt
+(`2026-09-28-node-graph-dashboard-agent-prompt.md`) for the literal spec pulled
+from that reference; this section states the intent, that file states the
+pixels.
 
 ## Goals
 
@@ -50,8 +60,9 @@ rework applies once `personal.level` is set.
 - Not building real physics/clustering sophistication — a small, good-enough
   force simulation (repulsion + spring edges + center pull), not a tuned
   layout engine.
-- Tools rail stays a plain list in this pass; richer tool interactions are a
-  future rework, not blocked by this one.
+- Tools rail is a richer grouped list per the Figma reference (category
+  headers, version/detection-status), but still read-only display — no new
+  server endpoints, no actual tool invocation from the dashboard.
 
 ## Data flow (unchanged inputs, new derivation)
 
@@ -100,8 +111,18 @@ Color mapping (reuses existing state semantics, new node-specific palette):
   from simulation forces while held); pointer-up releases it back into the
   simulation. No persistence of dragged positions across reloads — session
   only.
-- Click a node → small inline panel/tooltip showing `what`, `where`, `search`
-  link (same content the old path step showed).
+- Click a node → a persistent node-detail card (not a transient tooltip, per
+  the Figma reference) showing `what`, `where`, dep/use counts, `search` link,
+  and quick state-mark buttons.
+
+**Important data caveat**: the Figma reference's node-detail card shows a
+"Deps"/"Uses" count pair and Learned/Review quick-mark buttons — these do not
+map to any field OnTrack's inventory currently carries (no dependency-count or
+manual-override-state concept exists in `inventory.json`/`personal.json`
+today). The agent prompt below marks these as adapt-or-drop: reachable
+extensions are fine, but they must not block shipping the rest of the graph,
+and any answer-writing "quick mark" button must still go through the existing
+`/answer` POST contract, not a new ad-hoc state.
 
 ## Questions panel
 
@@ -114,10 +135,13 @@ now visible on the graph itself rather than only in a path list.
 
 ## Tools panel
 
-Right rail, simple list: `inventory.items.filter(i => i.kind === "tool")`,
-each rendered as name + `where`. No confidence, no interactivity beyond a
-search link (matches `pathStep`'s existing search-link pattern). Empty state:
-"No tooling detected yet" if the list is empty.
+Right rail, `inventory.items.filter(i => i.kind === "tool")`, grouped by a
+category derived from the item (see agent prompt for the exact grouping rule,
+since `inventory.json` has no category field today — this is a display-layer
+grouping, not a new data field). Each row shows name + `where`, matching the
+Figma reference's row shape minus the fields OnTrack has no data for (version,
+live detection status) — see the agent prompt's adapt-or-drop note. Empty
+state: "No tooling detected yet" if the list is empty.
 
 ## Testing
 
