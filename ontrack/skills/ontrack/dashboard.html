@@ -129,7 +129,7 @@
     overflow:hidden; height:60vh; min-height:360px; }
   .gv-graph svg { width:100%; height:100%; display:block; }
   .gv-edge { stroke-width:1; }
-  .gv-node circle { cursor:grab; }
+  .gv-node circle { cursor:grab; touch-action:none; }
   .gv-node text { fill:#fff; font:700 10px var(--sans); text-anchor:middle;
     dominant-baseline:middle; pointer-events:none; }
   .gv-legend { position:absolute; top:16px; left:16px; background:rgba(30,30,30,0.8);
@@ -518,17 +518,26 @@ function graphPanel() {
     g.addEventListener("pointerdown", (ev) => {
       n.fixed = true;
       const move = (mv) => {
-        const rect = svg.getBoundingClientRect();
-        n.x = (mv.clientX - rect.left) / rect.width * width;
-        n.y = (mv.clientY - rect.top) / rect.height * height;
+        // getScreenCTM().inverse() converts screen (client) coordinates into
+        // the <svg>'s current user-space coordinates, correctly accounting
+        // for the viewBox's preserveAspectRatio letterboxing/scaling AND
+        // whatever viewBox the zoom controls have set — a plain
+        // getBoundingClientRect() ratio assumes the panel is exactly 4:3
+        // and ignores zoom, which is wrong in both cases.
+        const pt = svg.createSVGPoint();
+        pt.x = mv.clientX; pt.y = mv.clientY;
+        const local = pt.matrixTransform(svg.getScreenCTM().inverse());
+        n.x = local.x; n.y = local.y;
       };
       const up = () => {
         n.fixed = false;
         window.removeEventListener("pointermove", move);
         window.removeEventListener("pointerup", up);
+        window.removeEventListener("pointercancel", up);
       };
       window.addEventListener("pointermove", move);
       window.addEventListener("pointerup", up);
+      window.addEventListener("pointercancel", up);
     });
     g.addEventListener("click", () => {
       gs.selectedId = n.id;
