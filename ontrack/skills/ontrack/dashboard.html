@@ -310,6 +310,93 @@ function questionCard(q, optional) {
   return c;
 }
 
+// Deterministic pseudo-random start position, seeded by id, so repeated
+// renders before the sim settles don't jump the layout around.
+function seedXY(id, width, height) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  const rx = ((h >>> 0) % 1000) / 1000;
+  const ry = (((h >>> 8) >>> 0) % 1000) / 1000;
+  return { x: width * (0.2 + 0.6 * rx), y: height * (0.2 + 0.6 * ry) };
+}
+
+function buildGraphNodes(inv, qByC, width, height) {
+  width = width || 800; height = height || 600;
+  const nodes = [];
+  for (const item of (inv.items || [])) {
+    if (item.kind === "tool") continue;
+    const q = qByC[item.id];
+    const state = q ? stateOf(q) : "untested";
+    const { x, y } = seedXY(item.id, width, height);
+    nodes.push({
+      id: item.id, label: item.name || item.id, kind: item.kind,
+      where: item.where || [], what: item.what, search: item.search,
+      state: state === "unanswered" ? "untested" : state,
+      x, y, vx: 0, vy: 0, fixed: false,
+    });
+  }
+  return nodes;
+}
+
+function buildGraphEdges(nodes, inv) {
+  const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
+  const bySource = {};  // "{type}::{name}" -> node.id, for items that ARE a dep/language
+  for (const item of (inv.items || [])) {
+    if (item.kind === "library") bySource[`dependency::${item.name}`.toLowerCase()] = item.id;
+    if (item.kind === "language") bySource[`file_extension::${item.name}`.toLowerCase()] = item.id;
+  }
+  const edges = [];
+  for (const item of (inv.items || [])) {
+    if (!byId[item.id]) continue;
+    for (const prov of (item.from || [])) {
+      const srcId = bySource[`${prov.type}::${prov.name}`.toLowerCase()];
+      if (srcId && byId[srcId]) edges.push({ source: srcId, target: item.id });
+    }
+  }
+  return edges;
+}
+
+// One simulation tick: repulsion between all pairs, spring attraction along
+// edges, weak center-pull, velocity damping. Mutates node x/y/vx/vy in place.
+// ponytail: O(n^2) repulsion, fine at tens of nodes; add spatial partitioning
+// if a real project's inventory ever makes this visibly slow.
+function forceStep(nodes, edges, width, height, dt) {
+  const REPEL = 6000, SPRING = 0.02, REST = 90, CENTER = 0.002, DAMP = 0.85;
+  for (const n of nodes) { if (!n.fixed) { n.fx = 0; n.fy = 0; } }
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i], b = nodes[j];
+      let dx = a.x - b.x, dy = a.y - b.y;
+      let dist2 = dx * dx + dy * dy;
+      if (dist2 < 1) dist2 = 1;
+      const force = REPEL / dist2;
+      const dist = Math.sqrt(dist2);
+      const fx = (dx / dist) * force, fy = (dy / dist) * force;
+      if (!a.fixed) { a.fx += fx; a.fy += fy; }
+      if (!b.fixed) { b.fx -= fx; b.fy -= fy; }
+    }
+  }
+  const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
+  for (const e of edges) {
+    const a = byId[e.source], b = byId[e.target];
+    if (!a || !b) continue;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const dist = Math.max(1, Math.hypot(dx, dy));
+    const stretch = dist - REST;
+    const fx = (dx / dist) * stretch * SPRING, fy = (dy / dist) * stretch * SPRING;
+    if (!a.fixed) { a.fx += fx; a.fy += fy; }
+    if (!b.fixed) { b.fx -= fx; b.fy -= fy; }
+  }
+  for (const n of nodes) {
+    if (n.fixed) continue;
+    n.fx += (width / 2 - n.x) * CENTER;
+    n.fy += (height / 2 - n.y) * CENTER;
+    n.vx = (n.vx + n.fx * dt) * DAMP;
+    n.vy = (n.vy + n.fy * dt) * DAMP;
+    n.x += n.vx; n.y += n.vy;
+  }
+}
+
 // Build the ordered learning path from the whole concept inventory, filtered by
 // the derived level. Answered gaps always appear; untested concepts appear by
 // level; foundational prereqs appear only for beginners.
