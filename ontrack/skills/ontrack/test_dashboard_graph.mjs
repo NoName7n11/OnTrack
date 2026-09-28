@@ -45,7 +45,7 @@ function test_buildGraphNodes_excludes_tools() {
 
 function test_buildGraphEdges_skips_dangling_provenance() {
   const inventory = { items: [
-    { id: "library:react", kind: "library", name: "React" },
+    { id: "library:react", kind: "library", name: "react" },
     { id: "concept:react/useeffect", kind: "concept", name: "useEffect",
       from: [{ type: "dependency", name: "react" }] },
     { id: "concept:orphan", kind: "concept", name: "Orphan",
@@ -57,6 +57,20 @@ function test_buildGraphEdges_skips_dangling_provenance() {
   if (edges[0].source !== "library:react" || edges[0].target !== "concept:react/useeffect")
     throw new Error("edge did not resolve to the expected source/target");
   console.log("ok: buildGraphEdges resolves provenance and skips dangling from-entries");
+}
+
+function test_buildGraphEdges_resolves_language_extension_provenance() {
+  const inventory = { items: [
+    { id: "language:python", kind: "language", name: "Python" },
+    { id: "concept:python/decorators", kind: "concept", name: "Decorators",
+      from: [{ type: "file_extension", name: "py" }] },
+  ] };
+  const nodes = buildGraphNodes(inventory, {});
+  const edges = buildGraphEdges(nodes, inventory);
+  if (edges.length !== 1) throw new Error(`expected 1 resolvable edge, got ${edges.length}`);
+  if (edges[0].source !== "language:python" || edges[0].target !== "concept:python/decorators")
+    throw new Error("edge did not resolve language label 'Python' to its raw extension 'py'");
+  console.log("ok: buildGraphEdges resolves a language item's raw file_extension provenance");
 }
 
 function test_forceStep_moves_repelling_nodes_apart() {
@@ -84,6 +98,7 @@ function test_forceStep_skips_fixed_nodes() {
 
 test_buildGraphNodes_excludes_tools();
 test_buildGraphEdges_skips_dangling_provenance();
+test_buildGraphEdges_resolves_language_extension_provenance();
 test_forceStep_moves_repelling_nodes_apart();
 test_forceStep_skips_fixed_nodes();
 console.log("PASS");

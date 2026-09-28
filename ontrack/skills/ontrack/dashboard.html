@@ -338,18 +338,30 @@ function buildGraphNodes(inv, qByC, width, height) {
   return nodes;
 }
 
+// Mirrors build.py's EXT_LANG label column (extension -> display label),
+// reversed here to recover the raw extension a language item's `from`
+// provenance actually carries (build.py:312 stores the extension, not the
+// label). Keep in sync with build.py's EXT_LANG if that table changes.
+const LABEL_TO_EXT = {
+  "Python": "py", "JavaScript": "js", "JavaScript (React)": "jsx",
+  "TypeScript": "ts", "TypeScript (React)": "tsx", "Rust": "rs", "Go": "go",
+  "Java": "java", "Ruby": "rb", "PHP": "php", "C#": "cs", "C++": "cpp",
+  "C": "c", "HTML": "html", "CSS": "css", "Sass": "scss",
+};
+
 function buildGraphEdges(nodes, inv) {
   const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
   const bySource = {};  // "{type}::{name}" -> node.id, for items that ARE a dep/language
   for (const item of (inv.items || [])) {
-    if (item.kind === "library") bySource[`dependency::${item.name}`.toLowerCase()] = item.id;
-    if (item.kind === "language") bySource[`file_extension::${item.name}`.toLowerCase()] = item.id;
+    if (item.kind === "library") bySource[`dependency::${item.name}`] = item.id;
+    if (item.kind === "language")
+      bySource[`file_extension::${LABEL_TO_EXT[item.name] || item.name}`] = item.id;
   }
   const edges = [];
   for (const item of (inv.items || [])) {
     if (!byId[item.id]) continue;
     for (const prov of (item.from || [])) {
-      const srcId = bySource[`${prov.type}::${prov.name}`.toLowerCase()];
+      const srcId = bySource[`${prov.type}::${prov.name}`];
       if (srcId && byId[srcId]) edges.push({ source: srcId, target: item.id });
     }
   }
