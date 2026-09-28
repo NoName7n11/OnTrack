@@ -163,6 +163,30 @@
     padding:8px 12px; font:600 12px var(--sans); cursor:pointer; width:100%; text-align:center;
     text-decoration:none; display:block; box-sizing:border-box; }
   .gv-empty { color:var(--gv-faint); font-size:13.5px; font-style:italic; padding:24px; }
+
+  .gv-tools { grid-column:2; grid-row:1 / span 2; background:var(--gv-bg);
+    border-left:2px solid var(--gv-accent); overflow-y:auto; }
+  @media (max-width: 900px) { .gv-tools { grid-column:1; grid-row:auto; border-left:none;
+    border-top:2px solid var(--gv-accent); } }
+  .gv-tools-hd { background:var(--gv-panel2); border-bottom:1px solid var(--gv-accent);
+    display:flex; align-items:center; gap:8px; padding:0 16px; height:48px; }
+  .gv-tools-hd .title { color:var(--gv-text); font-weight:600; font-size:14px; }
+  .gv-tools-hd .count { background:var(--gv-accent-soft); color:#60a5fa; font-size:10px;
+    padding:2px 7px; border-radius:10px; }
+  .gv-tools-filter { padding:10px 12px; border-bottom:1px solid var(--gv-border2); }
+  .gv-tools-filter input { width:100%; box-sizing:border-box; background:#242424;
+    border:1px solid var(--gv-border); border-radius:6px; padding:7px 10px; color:var(--gv-text2);
+    font-size:12px; }
+  .gv-tools-cat { color:var(--gv-faint); font:600 10px var(--mono); letter-spacing:.06em;
+    text-transform:uppercase; padding:10px 14px 4px; }
+  .gv-tool-row { display:flex; gap:10px; align-items:center; padding:10px 14px;
+    border-bottom:1px solid var(--gv-border2); }
+  .gv-tool-badge { width:36px; height:36px; border-radius:8px; flex:none; display:flex;
+    align-items:center; justify-content:center; background:var(--gv-accent-soft); color:#60a5fa;
+    font:700 10px var(--sans); }
+  .gv-tool-name { color:var(--gv-text); font-weight:600; font-size:13px; }
+  .gv-tool-where { color:var(--gv-faint); font-size:11px; overflow:hidden; text-overflow:ellipsis;
+    white-space:nowrap; }
 </style>
 </head>
 <body>
@@ -623,6 +647,62 @@ function renderGraphOnly() {
   if (old && old.parentNode) old.parentNode.replaceChild(graphPanel(), old);
 }
 
+// display-only client lookup, matching ontrack/skills/ontrack/build.py's
+// CONFIG_TOOL labels by name (no server-side category field for tools).
+const TOOL_CATEGORY = {
+  Docker: "Containers", Make: "Build Tools", Procfile: "Process Config",
+  Vagrant: "Virtualization", Rake: "Build Tools", Jenkins: "CI/CD",
+};
+
+function toolsPanel() {
+  const panel = el("div", "gv-tools");
+  const tools = (inventory.items || []).filter(i => i.kind === "tool");
+
+  const hd = el("div", "gv-tools-hd");
+  hd.appendChild(el("span", "title", "Tools"));
+  hd.appendChild(el("span", "count", String(tools.length)));
+  panel.appendChild(hd);
+
+  const filterWrap = el("div", "gv-tools-filter");
+  const input = document.createElement("input");
+  input.placeholder = "Filter tools...";
+  filterWrap.appendChild(input);
+  panel.appendChild(filterWrap);
+
+  const list = el("div", null);
+  panel.appendChild(list);
+
+  function draw(filterText) {
+    list.innerHTML = "";
+    if (!tools.length) { list.appendChild(el("div", "gv-empty", "No tooling detected yet")); return; }
+    const byCat = {};
+    for (const t of tools) {
+      if (filterText && !(t.name || t.id).toLowerCase().includes(filterText)) continue;
+      const cat = TOOL_CATEGORY[t.name] || "Tools";
+      (byCat[cat] = byCat[cat] || []).push(t);
+    }
+    const cats = Object.keys(byCat).sort();
+    if (!cats.length) { list.appendChild(el("div", "gv-empty", "No tools match that filter")); return; }
+    for (const cat of cats) {
+      list.appendChild(el("div", "gv-tools-cat", cat));
+      for (const t of byCat[cat]) {
+        const row = el("div", "gv-tool-row");
+        const badge = el("div", "gv-tool-badge", (t.name || t.id).slice(0, 3));
+        row.appendChild(badge);
+        const info = el("div", null);
+        info.appendChild(el("div", "gv-tool-name", t.name || t.id));
+        info.appendChild(el("div", "gv-tool-where", (t.where || []).join(", ")));
+        row.appendChild(info);
+        list.appendChild(row);
+      }
+    }
+  }
+  draw("");
+  input.addEventListener("input", () => draw(input.value.trim().toLowerCase()));
+
+  return panel;
+}
+
 // Build the ordered learning path from the whole concept inventory, filtered by
 // the derived level. Answered gaps always appear; untested concepts appear by
 // level; foundational prereqs appear only for beginners.
@@ -720,6 +800,7 @@ function render() {
   // this same .gv-layout grid's remaining cells in later steps)
   const layout = el("div", "gv-layout");
   layout.appendChild(graphPanel());
+  layout.appendChild(toolsPanel());
   gvContainer.appendChild(layout);
 
   // split unanswered questions into placement (required) + optional
