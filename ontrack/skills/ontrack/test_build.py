@@ -17,6 +17,7 @@ def test_build_inventory():
         (root / "main.py").write_text("print(1)")
         (root / "style.scss").write_text("$x: red;")
         (root / "notes.md").write_text("# hi")  # noise ext -> skipped
+        (root / "Dockerfile").write_text("FROM python:3.12\n")
         # stale evidence: a dep that is NOT in any current manifest
         (root / ".ontrack").mkdir()
         (root / ".ontrack" / "evidence.jsonl").write_text(
@@ -25,7 +26,9 @@ def test_build_inventory():
             '{"type":"file_extension","name":"tsx","source":"App.tsx","detected_at":"x"}\n'
             '{"type":"file_extension","name":"py","source":"main.py","detected_at":"x"}\n'
             '{"type":"file_extension","name":"scss","source":"style.scss","detected_at":"x"}\n'
-            '{"type":"file_extension","name":"md","source":"notes.md","detected_at":"x"}\n')
+            '{"type":"file_extension","name":"md","source":"notes.md","detected_at":"x"}\n'
+            '{"type":"tool_config","name":"Dockerfile","source":"Dockerfile","detected_at":"x"}\n'
+            '{"type":"tool_config","name":"Makefile","source":"Makefile","detected_at":"x"}\n')
 
         inv = build.build_inventory(root)
         by_id = {i["id"]: i for i in inv["items"]}
@@ -34,6 +37,10 @@ def test_build_inventory():
         assert "language:typescript-react" in by_id, by_id  # .tsx
         assert "language:python" in by_id, by_id            # .py
         assert "language:sass" in by_id, by_id              # .scss
+        assert "tool:docker" in by_id, by_id                # Dockerfile
+        assert by_id["tool:docker"]["kind"] == "tool"
+        # stale tool_config dropped: Makefile was in evidence but not in the repo now
+        assert "tool:make" not in by_id, "stale tool_config evidence must not survive"
         assert not any(i["kind"] == "language" and i["name"] == "Markdown" for i in inv["items"])
         # stale dep dropped: leftpad was in evidence but not in the repo now
         assert "library:leftpad" not in by_id, "stale evidence must not survive"
