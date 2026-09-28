@@ -121,6 +121,48 @@
   .gv-count b { font-weight:600; }
   .gv-recalc { background:var(--gv-accent); color:#fff; border:none; border-radius:6px;
     padding:5px 12px; font:600 12px var(--sans); cursor:pointer; display:flex; align-items:center; gap:6px; }
+
+  .gv-layout { display:grid; grid-template-columns:1fr 300px; grid-template-rows:auto auto; }
+  @media (max-width: 900px) { .gv-layout { grid-template-columns:1fr; } }
+
+  .gv-graph { position:relative; background:var(--gv-well); border-right:2px solid var(--gv-accent);
+    overflow:hidden; height:60vh; min-height:360px; }
+  .gv-graph svg { width:100%; height:100%; display:block; }
+  .gv-edge { stroke-width:1; }
+  .gv-node circle { cursor:grab; }
+  .gv-node text { fill:#fff; font:700 10px var(--sans); text-anchor:middle;
+    dominant-baseline:middle; pointer-events:none; }
+  .gv-legend { position:absolute; top:16px; left:16px; background:rgba(30,30,30,0.8);
+    border:1px solid var(--gv-border); border-radius:8px; padding:10px 12px;
+    display:flex; flex-direction:column; gap:6px; font-size:11px; }
+  .gv-legend .lt { color:var(--gv-muted); font:600 10px var(--mono); letter-spacing:.05em;
+    text-transform:uppercase; }
+  .gv-legend .lr { display:flex; align-items:center; gap:8px; color:var(--gv-text2); }
+  .gv-legend .ld { width:10px; height:10px; border-radius:5px; flex:none; }
+  .gv-zoom { position:absolute; bottom:16px; right:16px; background:rgba(30,30,30,0.8);
+    border:1px solid var(--gv-border); border-radius:8px; padding:6px; display:flex;
+    flex-direction:column; gap:4px; }
+  .gv-zoom button { width:28px; height:28px; background:#242424; border:none; border-radius:6px;
+    color:var(--gv-muted); font-size:16px; cursor:pointer; }
+  .gv-detail { position:absolute; top:16px; right:16px; width:244px; background:var(--gv-panel2);
+    border:1px solid var(--gv-accent); border-radius:12px; overflow:hidden; }
+  .gv-detail .hd { background:var(--gv-accent); display:flex; align-items:center;
+    justify-content:space-between; padding:12px 14px; }
+  .gv-detail .hd .name { color:#fff; font-weight:700; font-size:13px; display:flex; align-items:center; gap:8px; }
+  .gv-detail .hd .dot { width:10px; height:10px; border-radius:5px; }
+  .gv-detail .hd .badge { background:rgba(255,255,255,0.13); color:#93c5fd; font:600 10px var(--sans);
+    padding:3px 8px; border-radius:4px; text-transform:uppercase; }
+  .gv-detail .bd { padding:14px; display:flex; flex-direction:column; gap:12px; }
+  .gv-detail .what { color:var(--gv-text2); font-size:12px; }
+  .gv-detail .files-lt { color:var(--gv-muted); font:600 10px var(--mono); letter-spacing:.05em;
+    text-transform:uppercase; }
+  .gv-detail .file-row { background:#12181f; border:1px solid var(--gv-border2); border-radius:5px;
+    padding:5px 8px; font-size:11px; color:#93c5fd; overflow:hidden; text-overflow:ellipsis;
+    white-space:nowrap; margin-top:4px; }
+  .gv-detail .yt { background:var(--gv-danger); color:#fff; border:none; border-radius:8px;
+    padding:8px 12px; font:600 12px var(--sans); cursor:pointer; width:100%; text-align:center;
+    text-decoration:none; display:block; box-sizing:border-box; }
+  .gv-empty { color:var(--gv-faint); font-size:13.5px; font-style:italic; padding:24px; }
 </style>
 </head>
 <body>
@@ -409,6 +451,169 @@ function forceStep(nodes, edges, width, height, dt) {
   }
 }
 
+let graphState = null;  // { nodes, edges, selectedId } — survives re-renders in-session
+let graphPanelGen = 0;  // bumped on every graphPanel() call; stops stale tick() loops
+                          // even when a re-render reuses the same graphState object
+                          // (e.g. a selectedId-only renderGraphOnly() after a node click)
+
+function graphPanel() {
+  const panel = el("div", "gv-graph");
+  const width = 800, height = 600;  // logical viewBox size; CSS scales the <svg> to its panel
+
+  if (!graphState || graphState.stale) {
+    const nodes = buildGraphNodes(inventory, qByConcept, width, height);
+    const edges = buildGraphEdges(nodes, inventory);
+    const selectedId = graphState ? graphState.selectedId : null;
+    graphState = { nodes, edges, selectedId, stale: false };
+  }
+  const gs = graphState;
+  // Every graphPanel() call — including a selectedId-only renderGraphOnly()
+  // re-render that reuses the same gs — starts its own tick() loop below.
+  // Comparing against graphState/gs identity isn't enough to stop a stale
+  // loop in that case, since gs itself doesn't change; myGen gives each call
+  // its own identity so only the most recent call's loop keeps running.
+  const myGen = ++graphPanelGen;
+
+  if (!gs.nodes.length) {
+    panel.appendChild(el("div", "gv-empty",
+      "Nothing to graph yet. Run /ontrack to scan the project first."));
+    return panel;
+  }
+
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  panel.appendChild(svg);
+
+  const edgeEls = gs.edges.map(e => {
+    const line = document.createElementNS(svgNS, "line");
+    line.setAttribute("class", "gv-edge");
+    const src = gs.nodes.find(n => n.id === e.source);
+    line.setAttribute("stroke", `var(--gv-${src ? src.state : "untested"})`);
+    line.setAttribute("stroke-opacity", "0.33");
+    svg.appendChild(line);
+    return { e, line };
+  });
+
+  const RADIUS = { concept: 26, library: 34, language: 34 };
+  const nodeEls = gs.nodes.map(n => {
+    const g = document.createElementNS(svgNS, "g");
+    g.setAttribute("class", "gv-node");
+    const circle = document.createElementNS(svgNS, "circle");
+    const r = RADIUS[n.kind] || 26;
+    circle.setAttribute("r", String(r));
+    circle.setAttribute("fill", `var(--gv-${n.state})`);
+    if (n.kind === "concept") {
+      circle.setAttribute("stroke", "#4b5563"); circle.setAttribute("stroke-width", "1.5");
+    }
+    if (gs.selectedId === n.id) {
+      circle.setAttribute("stroke", "#60a5fa"); circle.setAttribute("stroke-width", "3");
+    }
+    g.appendChild(circle);
+    const text = document.createElementNS(svgNS, "text");
+    text.textContent = n.label.length > 12 ? n.label.slice(0, 11) + "…" : n.label;
+    g.appendChild(text);
+    svg.appendChild(g);
+
+    g.addEventListener("pointerdown", (ev) => {
+      n.fixed = true;
+      const move = (mv) => {
+        const rect = svg.getBoundingClientRect();
+        n.x = (mv.clientX - rect.left) / rect.width * width;
+        n.y = (mv.clientY - rect.top) / rect.height * height;
+      };
+      const up = () => {
+        n.fixed = false;
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", up);
+      };
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", up);
+    });
+    g.addEventListener("click", () => {
+      gs.selectedId = n.id;
+      renderGraphOnly();
+    });
+    return { n, g, circle, text };
+  });
+
+  function tick() {
+    // dt=1: DAMP(0.85)/REPEL(6000)/SPRING(0.02) were tuned for one integration
+    // step per animation frame. Verified analytically (no real browser in this
+    // environment) via a throwaway 600-frame simulation across several seed
+    // configs: dt=1 reliably recovers from worst-case close-seed repel spikes
+    // to a stable equilibrium within ~400-450 frames without the much larger
+    // off-screen peak overshoot seen at dt=2/3. A human should still eyeball
+    // this once a real browser is available.
+    forceStep(gs.nodes, gs.edges, width, height, 1);
+    for (const { n, g } of nodeEls) g.setAttribute("transform", `translate(${n.x},${n.y})`);
+    for (const { e, line } of edgeEls) {
+      const src = gs.nodes.find(x => x.id === e.source), dst = gs.nodes.find(x => x.id === e.target);
+      if (!src || !dst) continue;
+      line.setAttribute("x1", src.x); line.setAttribute("y1", src.y);
+      line.setAttribute("x2", dst.x); line.setAttribute("y2", dst.y);
+    }
+    if (myGen === graphPanelGen) requestAnimationFrame(tick);  // stale loop stops itself after a re-render
+  }
+  requestAnimationFrame(tick);
+
+  const legend = el("div", "gv-legend");
+  legend.appendChild(el("div", "lt", "Confidence"));
+  for (const [key, label] of [["learned","Learned"],["learn","Learn"],["review","Review"],["untested","Untested"]]) {
+    const row = el("div", "lr");
+    const dot = el("span", "ld"); dot.style.background = `var(--gv-${key})`;
+    row.appendChild(dot); row.appendChild(el("span", null, label));
+    legend.appendChild(row);
+  }
+  panel.appendChild(legend);
+
+  const zoom = el("div", "gv-zoom");
+  const zin = el("button", null, "+"), zout = el("button", null, "−");
+  let scale = 1;
+  const applyZoom = () => svg.setAttribute("viewBox",
+    `${width/2 - (width/2)/scale} ${height/2 - (height/2)/scale} ${width/scale} ${height/scale}`);
+  zin.addEventListener("click", () => { scale = Math.min(3, scale * 1.2); applyZoom(); });
+  zout.addEventListener("click", () => { scale = Math.max(0.4, scale / 1.2); applyZoom(); });
+  zoom.appendChild(zin); zoom.appendChild(zout);
+  panel.appendChild(zoom);
+
+  if (gs.selectedId) {
+    const n = gs.nodes.find(x => x.id === gs.selectedId);
+    if (n) panel.appendChild(nodeDetailCard(n));
+  }
+
+  return panel;
+}
+
+function nodeDetailCard(n) {
+  const card = el("div", "gv-detail");
+  const hd = el("div", "hd");
+  const name = el("div", "name");
+  const dot = el("span", "dot"); dot.style.background = `var(--gv-${n.state})`;
+  name.appendChild(dot); name.appendChild(el("span", null, n.label));
+  hd.appendChild(name);
+  hd.appendChild(el("span", "badge", n.state.toUpperCase()));
+  card.appendChild(hd);
+  const bd = el("div", "bd");
+  if (n.what) bd.appendChild(el("div", "what", n.what));
+  if (n.where && n.where.length) {
+    bd.appendChild(el("div", "files-lt", "Related files"));
+    for (const w of n.where) bd.appendChild(el("div", "file-row", w));
+  }
+  const yt = el("a", "yt", "Search on YouTube");
+  yt.href = ytLink(n.search || n.label); yt.target = "_blank"; yt.rel = "noopener";
+  bd.appendChild(yt);
+  card.appendChild(bd);
+  return card;
+}
+
+// Re-render just the graph panel in place, without rebuilding the whole
+// page (used after selecting a node, so Questions/Tools don't flicker).
+function renderGraphOnly() {
+  const old = document.querySelector(".gv-graph");
+  if (old && old.parentNode) old.parentNode.replaceChild(graphPanel(), old);
+}
+
 // Build the ordered learning path from the whole concept inventory, filtered by
 // the derived level. Answered gaps always appear; untested concepts appear by
 // level; foundational prereqs appear only for beginners.
@@ -501,6 +706,12 @@ function render() {
 
   // stat bar (replaces old levelbar)
   gvContainer.appendChild(statBar());
+
+  // node graph panel (Task 4/5 append the questions and tools panels into
+  // this same .gv-layout grid's remaining cells in later steps)
+  const layout = el("div", "gv-layout");
+  layout.appendChild(graphPanel());
+  gvContainer.appendChild(layout);
 
   // split unanswered questions into placement (required) + optional
   const unanswered = questions.filter(q => !personal.answers[q.id]);
