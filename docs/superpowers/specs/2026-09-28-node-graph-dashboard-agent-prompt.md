@@ -23,13 +23,19 @@ are replacing how the already-loaded data is *laid out and rendered* after a
 level is set — not touching the server, not touching the JSON shapes, not
 touching the intake screen.
 
-## Visual reference
+## Visual reference — reference, not spec
 
-A Figma frame shows the target layout, palette, and component shapes:
+A Figma frame informs the target layout, palette, and component shapes:
 https://www.figma.com/design/cAfSVmxMUZJebm4Nkalf4X/Principles?node-id=63-25&m=dev
-(node `63:25`, "Desktop - 3"). If you have Figma access, pull this node for
-exact spacing/type/color values. If you don't, use the description below —
-it was written directly from that reference, including exact hex colors.
+(node `63:25`, "Desktop - 3"). Treat it as a strong starting point, not a
+pixel contract — match its structure, palette, and component ideas, but use
+your judgment where it conflicts with this project's existing conventions,
+where a literal detail doesn't fit OnTrack's real data (see "Data
+availability" below), or where a simpler/better solution is obvious. If you
+have Figma access, pull this node directly. If you don't, use the
+description below — it was written from that reference, including specific
+hex colors, but those are a starting palette to adapt, not values to copy
+byte-for-byte if they clash with the existing CSS variable system.
 
 **Read the "Data availability" section near the end before implementing the
 node-detail card and tools rows** — the reference includes a few fields
@@ -62,7 +68,7 @@ with this structure, top to bottom:
      running every inventory item (minus `kind:"tool"`) through the same
      state derivation used for graph nodes (see below) and tallying.
    - A "Recalculate" button, right-aligned, `#236ca1` background, small
-     refresh icon + label. **This button re-runs the existing
+     refresh icon + label. **This button re-runs the existing8  
      `derivedLevel()`/render pipeline client-side — it does not need a new
      server endpoint.** Wire it to just call your render function again;
      it's a manual refresh affordance, not new logic.
@@ -115,7 +121,8 @@ exactly) regardless of the site's light/dark toggle.
 Given the reference is clearly designed dark-only with no light variant
 shown, **(b) is the reasonable default** — treat the graph dashboard as a
 dark-only view — but flag this choice explicitly rather than silently
-dropping the existing light-mode support for the whole page.
+dropping the existing light-mode support for the whole page. If you find a
+clean way to keep both, that's a welcome improvement, not required.
 
 ## Node Graph panel — detail
 
