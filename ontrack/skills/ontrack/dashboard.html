@@ -91,25 +91,6 @@
   .optnote button { font:inherit; font-size:13px; color:var(--accent); background:none; border:none;
                     cursor:pointer; text-decoration:underline; padding:0; }
 
-  /* learning path */
-  .bucket { margin-bottom:20px; }
-  .bh { font-family:var(--mono); font-size:12px; letter-spacing:.08em; text-transform:uppercase;
-        color:var(--accent); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
-  .bh::after { content:""; flex:1; height:1px; background:var(--line); }
-  .pstep { display:grid; grid-template-columns:auto 1fr; gap:12px; padding:9px 0; border-bottom:1px solid var(--line); align-items:baseline; }
-  .pstep:last-child { border-bottom:none; }
-  .pn { font-family:var(--mono); font-size:13px; color:var(--faint); font-weight:700; }
-  .pt { font-size:15px; font-weight:600; }
-  .tag { font-family:var(--mono); font-size:10px; border-radius:3px; padding:0 5px;
-         margin-left:8px; letter-spacing:.04em; vertical-align:1px; border:1px solid currentColor; }
-  .t-review { color:var(--somewhat); } .t-prereq { color:var(--tolearn); } .t-suggested { color:var(--faint); }
-  .pwhat { color:var(--muted); font-size:13.5px; font-weight:400; margin-top:2px; }
-  .pmeta { font-size:12.5px; margin-top:3px; display:flex; gap:10px; flex-wrap:wrap; }
-  .pmeta .where { font-family:var(--mono); color:var(--faint); }
-  .pmeta a { color:var(--accent); text-decoration:none; }
-  .pmeta a:hover { text-decoration:underline; }
-  .done { color:var(--faint); font-size:13px; margin-top:6px; }
-
   .gv-statbar { background:#1c2b3a; border-bottom:2px solid var(--gv-accent);
     display:flex; align-items:center; gap:16px; height:44px; padding:0 24px; }
   .gv-pill { background:var(--gv-accent); color:#fff; font:600 11px var(--mono);
@@ -187,6 +168,22 @@
   .gv-tool-name { color:var(--gv-text); font-weight:600; font-size:13px; }
   .gv-tool-where { color:var(--gv-faint); font-size:11px; overflow:hidden; text-overflow:ellipsis;
     white-space:nowrap; }
+
+  .gv-questions { grid-column:1; background:var(--gv-bg); border-top:2px solid var(--gv-accent);
+    border-right:2px solid var(--gv-accent); display:grid; grid-template-columns:1fr 1fr; }
+  @media (max-width: 900px) { .gv-questions { grid-template-columns:1fr; border-right:none; } }
+  .gv-qcol { border-right:1px solid var(--gv-border2); display:flex; flex-direction:column; }
+  .gv-qcol:last-child { border-right:none; }
+  .gv-qcol-hd { background:var(--gv-panel); display:flex; align-items:center; gap:8px;
+    padding:10px 20px; }
+  .gv-qcol-hd .bar { width:3px; height:14px; border-radius:2px; }
+  .gv-qcol-hd .lbl { color:var(--gv-muted); font:600 12px var(--sans); letter-spacing:.03em;
+    text-transform:uppercase; }
+  .gv-qcol-hd .opt-pill { background:rgba(139,92,246,0.13); color:#a78bfa; font-size:10px;
+    padding:2px 6px; border-radius:4px; }
+  .gv-qcol-body { padding:10px 16px; display:flex; flex-direction:column; gap:8px;
+    max-height:220px; overflow-y:auto; }
+  .gv-qcol-body .done { color:var(--gv-faint); font-size:13px; margin-top:6px; }
 </style>
 </head>
 <body>
@@ -205,9 +202,6 @@ const LEVELS = [
   ["expert", "Expert", "Experienced — only surface the advanced gaps."],
 ];
 const LEVEL_LABEL = { beginner:"Beginner", intermediate:"Intermediate", expert:"Expert" };
-const DOMAIN_ORDER = ["language", "framework", "system-design", "security", "tooling", "other"];
-const DOMAIN_LABEL = { "language":"Language", "framework":"Framework",
-  "system-design":"System design", "security":"Security", "tooling":"Tooling", "other":"Other" };
 const TIER_RANK = { basic:0, intermediate:1, advanced:2 };
 const SELF_STATE = { "Confident":"learned", "Shaky":"review", "New":"learn" };
 
@@ -257,6 +251,7 @@ async function submitAnswer(q, payload) {
   try {
     const res = await postJSON("/answer", Object.assign({ question_id: q.id }, payload));
     if (res && res.answers) personal.answers = res.answers;
+    if (graphState) graphState.stale = true;
     render();
   } catch (e) { alert(e.message); }
 }
@@ -301,13 +296,6 @@ function derivedLevel() {
   if (inter.n >= MIN_TIER && inter.rate >= 0.5)
     return { level: "intermediate", why: `solid on intermediate (${inter.ok}/${inter.n}); advanced still to prove.` };
   return { level: "beginner", why: `basics are the place to start (${basic.ok}/${basic.n} so far).` };
-}
-
-// which untested concept tiers appear for a given level
-function showUntested(level, tier) {
-  if (level === "beginner") return true;
-  if (level === "intermediate") return tier !== "basic";
-  return tier === "advanced";   // expert
 }
 
 function ytLink(s) { return "https://www.youtube.com/results?search_query=" + encodeURIComponent(s); }
@@ -703,53 +691,38 @@ function toolsPanel() {
   return panel;
 }
 
-// Build the ordered learning path from the whole concept inventory, filtered by
-// the derived level. Answered gaps always appear; untested concepts appear by
-// level; foundational prereqs appear only for beginners.
-function buildPath(level) {
-  const steps = [];
-  for (const item of inventory.items || []) {
-    const q = qByConcept[item.id];
-    const st = q ? stateOf(q) : "untested";
-    if (st === "learned") continue;                       // knew it — drop
-    if (st === "learn" || st === "review") {              // confirmed gap — always
-      steps.push({ item, q, kind: st === "review" ? "review" : "gap" });
-      continue;
-    }
-    // untested (no question, or question unanswered)
-    if (item.kind !== "concept") continue;                // only concepts fill gaps
-    if (item.confidence === "foundational") {
-      if (level === "beginner") steps.push({ item, q: null, kind: "prereq" });
-      continue;
-    }
-    const tier = item.level || "intermediate";
-    if (showUntested(level, tier)) steps.push({ item, q: null, kind: "suggested" });
-  }
-  return steps;
-}
+function questionsPanel() {
+  const panel = el("div", "gv-questions");
+  const unanswered = questions.filter(q => !personal.answers[q.id]);
+  const placement = unanswered.filter(q => q.placement);
+  const optional = unanswered.filter(q => !q.placement && !skipped.has(q.id));
 
-function domainOf(step) {
-  return step.item.domain || (step.q && step.q.domain) || "other";
-}
+  const left = el("div", "gv-qcol");
+  const lhd = el("div", "gv-qcol-hd");
+  const lbar = el("span", "bar"); lbar.style.background = "var(--gv-accent)";
+  lhd.appendChild(lbar); lhd.appendChild(el("span", "lbl", "Place your level"));
+  left.appendChild(lhd);
+  const lbody = el("div", "gv-qcol-body");
+  if (placement.length) for (const q of placement) lbody.appendChild(questionCard(q, false));
+  else lbody.appendChild(el("div", "done", questions.length
+    ? "Placement done — your level above reflects your answers."
+    : "No questions yet. Run /ontrack to scan the project and generate them."));
+  left.appendChild(lbody);
+  panel.appendChild(left);
 
-function pathStep(step, n) {
-  const item = step.item;
-  const wrap = el("div", "pstep");
-  wrap.appendChild(el("span", "pn", n + "."));
-  const body = el("div");
-  const t = el("div", "pt", item.name || item.id);
-  const TAG = { review:["review","t-review"], prereq:["prereq","t-prereq"], suggested:["suggested","t-suggested"] };
-  if (TAG[step.kind]) { const [txt, cls] = TAG[step.kind]; t.appendChild(el("span", "tag " + cls, txt)); }
-  body.appendChild(t);
-  if (item.what) body.appendChild(el("div", "pwhat", item.what));
-  const meta = el("div", "pmeta");
-  const where = (item.where || []).join(", ");
-  if (where) meta.appendChild(el("span", "where", where));
-  const a = el("a", null, "search ›"); a.href = ytLink(item.search || item.name || item.id);
-  a.target = "_blank"; a.rel = "noopener"; meta.appendChild(a);
-  body.appendChild(meta);
-  wrap.appendChild(body);
-  return wrap;
+  const right = el("div", "gv-qcol");
+  const rhd = el("div", "gv-qcol-hd");
+  const rbar = el("span", "bar"); rbar.style.background = "var(--gv-purple)";
+  rhd.appendChild(rbar); rhd.appendChild(el("span", "lbl", "Sharpen the path"));
+  rhd.appendChild(el("span", "opt-pill", "optional"));
+  right.appendChild(rhd);
+  const rbody = el("div", "gv-qcol-body");
+  if (optional.length) for (const q of optional) rbody.appendChild(questionCard(q, true));
+  else rbody.appendChild(el("div", "done", "No more questions right now."));
+  right.appendChild(rbody);
+  panel.appendChild(right);
+
+  return panel;
 }
 
 function statBar() {
@@ -796,70 +769,13 @@ function render() {
   // stat bar (replaces old levelbar)
   gvContainer.appendChild(statBar());
 
-  // node graph panel (Task 4/5 append the questions and tools panels into
-  // this same .gv-layout grid's remaining cells in later steps)
+  // node graph + tools + questions panels, all cells of the same grid
   const layout = el("div", "gv-layout");
   layout.appendChild(graphPanel());
   layout.appendChild(toolsPanel());
+  layout.appendChild(questionsPanel());
   gvContainer.appendChild(layout);
 
-  // split unanswered questions into placement (required) + optional
-  const unanswered = questions.filter(q => !personal.answers[q.id]);
-  const placement = unanswered.filter(q => q.placement);
-  const optional = unanswered.filter(q => !q.placement && !skipped.has(q.id));
-
-  const pk = el("div", "kicker");
-  pk.appendChild(el("span", "n", "01")); pk.appendChild(el("span", null, "Placement"));
-  gvContainer.appendChild(pk);
-  gvContainer.appendChild(el("h2", null, "Place your level"));
-  gvContainer.appendChild(el("p", "lead", "A few quick questions so the path is pitched right — this isn't a test, and there's no grade to chase."));
-  if (placement.length) {
-    for (const q of placement) gvContainer.appendChild(questionCard(q, false));
-  } else {
-    gvContainer.appendChild(el("div", "done", questions.length
-      ? "Placement done — your level above reflects your answers."
-      : "No questions yet. Run /ontrack to scan the project and generate them."));
-  }
-
-  // optional deeper questions
-  if (optional.length) {
-    const ok = el("div", "kicker");
-    ok.appendChild(el("span", "n", "02")); ok.appendChild(el("span", null, "More questions"));
-    gvContainer.appendChild(ok);
-    gvContainer.appendChild(el("h2", null, "Sharpen the path (optional)"));
-    gvContainer.appendChild(el("p", "lead", "Answer any of these to pin down exactly what you know — or skip them all. They fine-tune the path; they don't gate it."));
-    for (const q of optional) gvContainer.appendChild(questionCard(q, true));
-  }
-
-  // learning path
-  const d = derivedLevel();
-  const lk = el("div", "kicker");
-  lk.appendChild(el("span", "n", optional.length ? "03" : "02"));
-  lk.appendChild(el("span", null, "Learning path"));
-  gvContainer.appendChild(lk);
-  gvContainer.appendChild(el("h2", null, "What to go learn, in order"));
-  gvContainer.appendChild(el("p", "lead", "Pitched for " + (LEVEL_LABEL[d.level] || d.level) +
-    ". Things you got wrong always show; the rest is filtered to your level."));
-
-  const steps = buildPath(d.level);
-  if (!steps.length) {
-    gvContainer.appendChild(el("div", "empty", "Nothing to learn here — either you knew it, or your level filters it out."));
-    app.appendChild(gvContainer);
-    return;
-  }
-  const byDomain = {};
-  for (const s of steps) (byDomain[domainOf(s)] = byDomain[domainOf(s)] || []).push(s);
-  const domains = Object.keys(byDomain).sort(
-    (a, b) => DOMAIN_ORDER.indexOf(a) - DOMAIN_ORDER.indexOf(b));
-  for (const dom of domains) {
-    const group = byDomain[dom].sort((a, b) =>
-      (TIER_RANK[a.item.level] ?? 1) - (TIER_RANK[b.item.level] ?? 1) ||
-      (a.item.id < b.item.id ? -1 : 1));
-    const bucket = el("div", "bucket");
-    bucket.appendChild(el("div", "bh", DOMAIN_LABEL[dom] || dom));
-    group.forEach((s, i) => bucket.appendChild(pathStep(s, i + 1)));
-    gvContainer.appendChild(bucket);
-  }
   app.appendChild(gvContainer);
 }
 
