@@ -31,7 +31,7 @@
     --gv-border:#333; --gv-border2:#2d3748; --gv-border3:#374151;
     --gv-accent:#236ca1; --gv-accent-soft:rgba(35,108,161,0.2);
     --gv-text:#f9fafb; --gv-text2:#d1d5db; --gv-muted:#9ca3af; --gv-faint:#6b7280;
-    --gv-learned:#10b981; --gv-learn:#3b82f6; --gv-review:#f59e0b; --gv-untested:#4b5563;
+    --gv-learned:#10b981; --gv-learn:#ef4444; --gv-review:#f59e0b; --gv-untested:#4b5563;
     --gv-danger:#dc2626; --gv-purple:#8b5cf6;
     background:var(--gv-bg); color:var(--gv-text2);
   }
@@ -100,6 +100,16 @@
   .gv-count b { font-weight:600; }
   .gv-recalc { background:var(--gv-accent); color:#fff; border:none; border-radius:6px;
     padding:5px 12px; font:600 12px var(--sans); cursor:pointer; display:flex; align-items:center; gap:6px; }
+
+  /* post-intake: render() puts .gv-page on <body>, lifting the old
+     single-column 860px cap so the 3-panel dashboard uses the viewport width,
+     and darkening the page/header so no light margins frame the dark block */
+  body.gv-page { background:#1a1a1a; }
+  body.gv-page header { border-bottom-color:#333; }
+  body.gv-page header .wrap, body.gv-page main.wrap { max-width:none; }
+  body.gv-page main { padding:0; }
+  body.gv-page h1 { color:#f9fafb; }
+  body.gv-page .sub { color:#9ca3af; }
 
   .gv-layout { display:grid; grid-template-columns:1fr 300px; grid-template-rows:auto auto; }
   @media (max-width: 900px) { .gv-layout { grid-template-columns:1fr; } }
@@ -179,8 +189,11 @@
     text-transform:uppercase; }
   .gv-qcol-hd .opt-pill { background:rgba(139,92,246,0.13); color:#a78bfa; font-size:10px;
     padding:2px 6px; border-radius:4px; }
+  /* tall enough that a full graded card (badges + prompt + 4 options + Save/Skip)
+     fits without scrolling inside the column first */
   .gv-qcol-body { padding:10px 16px; display:flex; flex-direction:column; gap:8px;
-    max-height:220px; overflow-y:auto; }
+    max-height:60vh; overflow-y:auto; }
+  .gv-qcol-body .qcard { margin-bottom:0; }  /* column gap already spaces cards */
   .gv-qcol-body .done { color:var(--gv-faint); font-size:13px; margin-top:6px; }
 </style>
 </head>
@@ -228,6 +241,7 @@ async function load() {
   invById = Object.fromEntries((inventory.items || []).map(i => [i.id, i]));
   qByConcept = {};
   for (const q of questions) if (!(q.concept in qByConcept)) qByConcept[q.concept] = q;
+  if (graphState) graphState.stale = true;  // rebuild nodes/edges from the fresh data
   render();
 }
 
@@ -381,7 +395,7 @@ function buildGraphNodes(inv, qByC, width, height) {
     const state = q ? stateOf(q) : "untested";
     const { x, y } = seedXY(item.id, width, height);
     nodes.push({
-      id: item.id, label: item.name || item.id, kind: item.kind,
+      id: item.id, label: item.name || item.id, kind: item.kind, parent: item.parent,
       where: item.where || [], what: item.what, search: item.search,
       state: state === "unanswered" ? "untested" : state,
       x, y, vx: 0, vy: 0, fixed: false,
@@ -410,12 +424,23 @@ function buildGraphEdges(nodes, inv) {
       bySource[`file_extension::${LABEL_TO_EXT[item.name] || item.name}`] = item.id;
   }
   const edges = [];
+  const seen = new Set();
+  const add = (source, target) => {
+    // A library/language item's own `from` points at its own provenance, so
+    // it resolves back to itself — never render that as a self-loop edge.
+    if (!source || source === target || !byId[source]) return;
+    const key = `${source}\u0000${target}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    edges.push({ source, target });
+  };
+  // Primary: build.py links a concept to its library/language via `parent`
+  // (that item's id); LLM-authored concepts leave `from` empty.
+  for (const n of nodes) add(n.parent, n.id);
+  // Secondary: `from` provenance, in case future data populates it.
   for (const item of (inv.items || [])) {
     if (!byId[item.id]) continue;
-    for (const prov of (item.from || [])) {
-      const srcId = bySource[`${prov.type}::${prov.name}`];
-      if (srcId && byId[srcId]) edges.push({ source: srcId, target: item.id });
-    }
+    for (const prov of (item.from || [])) add(bySource[`${prov.type}::${prov.name}`], item.id);
   }
   return edges;
 }
@@ -461,7 +486,7 @@ function forceStep(nodes, edges, width, height, dt) {
   }
 }
 
-let graphState = null;  // { nodes, edges, selectedId } — survives re-renders in-session
+let graphState = null;  // { nodes, edges, selectedId, scale } — survives re-renders in-session
 let graphPanelGen = 0;  // bumped on every graphPanel() call; stops stale tick() loops
                           // even when a re-render reuses the same graphState object
                           // (e.g. a selectedId-only renderGraphOnly() after a node click)
@@ -474,7 +499,8 @@ function graphPanel() {
     const nodes = buildGraphNodes(inventory, qByConcept, width, height);
     const edges = buildGraphEdges(nodes, inventory);
     const selectedId = graphState ? graphState.selectedId : null;
-    graphState = { nodes, edges, selectedId, stale: false };
+    const scale = graphState ? graphState.scale : 1;  // zoom survives rebuilds too
+    graphState = { nodes, edges, selectedId, scale, stale: false };
   }
   const gs = graphState;
   // Every graphPanel() call — including a selectedId-only renderGraphOnly()
@@ -492,7 +518,14 @@ function graphPanel() {
 
   const svgNS = "http://www.w3.org/2000/svg";
   const svg = document.createElementNS(svgNS, "svg");
-  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  // zoom lives on graphState so it survives the panel rebuilds that follow
+  // every click/drag/answer; re-apply it to each freshly built <svg>.
+  const applyZoom = () => {
+    const s = gs.scale;
+    svg.setAttribute("viewBox",
+      `${width/2 - (width/2)/s} ${height/2 - (height/2)/s} ${width/s} ${height/s}`);
+  };
+  applyZoom();
   panel.appendChild(svg);
 
   const edgeEls = gs.edges.map(e => {
@@ -588,11 +621,8 @@ function graphPanel() {
 
   const zoom = el("div", "gv-zoom");
   const zin = el("button", null, "+"), zout = el("button", null, "−");
-  let scale = 1;
-  const applyZoom = () => svg.setAttribute("viewBox",
-    `${width/2 - (width/2)/scale} ${height/2 - (height/2)/scale} ${width/scale} ${height/scale}`);
-  zin.addEventListener("click", () => { scale = Math.min(3, scale * 1.2); applyZoom(); });
-  zout.addEventListener("click", () => { scale = Math.max(0.4, scale / 1.2); applyZoom(); });
+  zin.addEventListener("click", () => { gs.scale = Math.min(3, gs.scale * 1.2); applyZoom(); });
+  zout.addEventListener("click", () => { gs.scale = Math.max(0.4, gs.scale / 1.2); applyZoom(); });
   zoom.appendChild(zin); zoom.appendChild(zout);
   panel.appendChild(zoom);
 
@@ -744,7 +774,9 @@ function statBar() {
   }
   bar.appendChild(wrap);
   const recalc = el("button", "gv-recalc", "Recalculate");
-  recalc.addEventListener("click", render);
+  // full data refresh: re-fetch inventory/questions/answers (picks up a fresh
+  // /ontrack run) and rebuild the graph from it
+  recalc.addEventListener("click", () => load().catch(e => alert(e.message)));
   bar.appendChild(recalc);
   return bar;
 }
@@ -752,8 +784,13 @@ function statBar() {
 function render() {
   const app = document.getElementById("app");
   app.innerHTML = "";
+  document.body.classList.toggle("gv-page", !!personal.level);
 
   if (!personal.level) {
+    // Stop any tick() loop left over from a graph panel we're tearing down
+    // (e.g. setLevel's POST failed and reverted to intake) — it only keeps
+    // running while its generation matches.
+    graphPanelGen++;
     const k = el("div", "kicker"); k.appendChild(el("span", null, "Start here"));
     app.appendChild(k);
     app.appendChild(el("h2", null, "Set your level"));

@@ -43,34 +43,70 @@ function test_buildGraphNodes_excludes_tools() {
   console.log("ok: buildGraphNodes excludes kind:tool items");
 }
 
-function test_buildGraphEdges_skips_dangling_provenance() {
+// Fixtures mirror build.py's real output: a library/language item's `from`
+// is its OWN provenance (self-referencing), and a concept links to its
+// library/language via `parent` (that item's id) with `from: []`.
+
+function test_buildGraphEdges_skips_dangling_parent() {
   const inventory = { items: [
-    { id: "library:react", kind: "library", name: "react" },
-    { id: "concept:react/useeffect", kind: "concept", name: "useEffect",
+    { id: "library:react", kind: "library", name: "react",
       from: [{ type: "dependency", name: "react" }] },
+    { id: "concept:react/useeffect", kind: "concept", name: "useEffect",
+      parent: "library:react", from: [] },
     { id: "concept:orphan", kind: "concept", name: "Orphan",
-      from: [{ type: "dependency", name: "nonexistent-package" }] },
+      parent: "library:nonexistent-package", from: [] },
   ] };
   const nodes = buildGraphNodes(inventory, {});
   const edges = buildGraphEdges(nodes, inventory);
-  if (edges.length !== 1) throw new Error(`expected 1 resolvable edge, got ${edges.length}`);
+  if (edges.length !== 1) throw new Error(`expected 1 resolvable edge, got ${JSON.stringify(edges)}`);
   if (edges[0].source !== "library:react" || edges[0].target !== "concept:react/useeffect")
     throw new Error("edge did not resolve to the expected source/target");
-  console.log("ok: buildGraphEdges resolves provenance and skips dangling from-entries");
+  console.log("ok: buildGraphEdges resolves parent links and skips dangling parents");
 }
 
-function test_buildGraphEdges_resolves_language_extension_provenance() {
+function test_buildGraphEdges_resolves_language_parent() {
   const inventory = { items: [
-    { id: "language:python", kind: "language", name: "Python" },
-    { id: "concept:python/decorators", kind: "concept", name: "Decorators",
+    { id: "language:python", kind: "language", name: "Python",
       from: [{ type: "file_extension", name: "py" }] },
+    { id: "concept:python/decorators", kind: "concept", name: "Decorators",
+      parent: "language:python", from: [] },
   ] };
   const nodes = buildGraphNodes(inventory, {});
   const edges = buildGraphEdges(nodes, inventory);
-  if (edges.length !== 1) throw new Error(`expected 1 resolvable edge, got ${edges.length}`);
+  if (edges.length !== 1) throw new Error(`expected 1 resolvable edge, got ${JSON.stringify(edges)}`);
   if (edges[0].source !== "language:python" || edges[0].target !== "concept:python/decorators")
-    throw new Error("edge did not resolve language label 'Python' to its raw extension 'py'");
-  console.log("ok: buildGraphEdges resolves a language item's raw file_extension provenance");
+    throw new Error("edge did not resolve the concept to its language parent");
+  console.log("ok: buildGraphEdges resolves a concept to its language parent");
+}
+
+function test_buildGraphEdges_parent_only_and_no_self_loops() {
+  const inventory = { items: [
+    { id: "library:react", kind: "library", name: "react",
+      from: [{ type: "dependency", name: "react" }] },
+    { id: "language:python", kind: "language", name: "Python",
+      from: [{ type: "file_extension", name: "py" }] },
+    { id: "concept:react/hooks", kind: "concept", name: "Hooks", parent: "library:react" },
+  ] };
+  const nodes = buildGraphNodes(inventory, {});
+  const edges = buildGraphEdges(nodes, inventory);
+  if (edges.some(e => e.source === e.target))
+    throw new Error(`self-referencing from produced a self-loop: ${JSON.stringify(edges)}`);
+  if (edges.length !== 1 || edges[0].source !== "library:react" || edges[0].target !== "concept:react/hooks")
+    throw new Error(`expected exactly the parent edge, got ${JSON.stringify(edges)}`);
+  console.log("ok: parent-only concept gets an edge; library/language self-from makes no self-loop");
+}
+
+function test_buildGraphEdges_dedupes_parent_and_from() {
+  const inventory = { items: [
+    { id: "language:python", kind: "language", name: "Python",
+      from: [{ type: "file_extension", name: "py" }] },
+    { id: "concept:python/decorators", kind: "concept", name: "Decorators",
+      parent: "language:python", from: [{ type: "file_extension", name: "py" }] },
+  ] };
+  const nodes = buildGraphNodes(inventory, {});
+  const edges = buildGraphEdges(nodes, inventory);
+  if (edges.length !== 1) throw new Error(`expected 1 deduped edge, got ${JSON.stringify(edges)}`);
+  console.log("ok: parent + from resolving to the same pair yields one edge");
 }
 
 function test_forceStep_moves_repelling_nodes_apart() {
@@ -97,8 +133,10 @@ function test_forceStep_skips_fixed_nodes() {
 }
 
 test_buildGraphNodes_excludes_tools();
-test_buildGraphEdges_skips_dangling_provenance();
-test_buildGraphEdges_resolves_language_extension_provenance();
+test_buildGraphEdges_skips_dangling_parent();
+test_buildGraphEdges_resolves_language_parent();
+test_buildGraphEdges_parent_only_and_no_self_loops();
+test_buildGraphEdges_dedupes_parent_and_from();
 test_forceStep_moves_repelling_nodes_apart();
 test_forceStep_skips_fixed_nodes();
 console.log("PASS");
