@@ -24,6 +24,18 @@
     --faint:#727c74; --line:#2a2f2b; --line2:#3a403a; --accent:#43b7a2; --accent-soft:#163029;
     --tolearn:#5e9ad8; --somewhat:#d3982f; --code:#1e2320; }
 
+  /* graph-view dark chrome (always dark, independent of the light/dark toggle
+     above — see spec's Global Constraints for why) */
+  .gv {
+    --gv-bg:#1a1a1a; --gv-panel:#1e1e1e; --gv-panel2:#1e2530; --gv-well:#171717;
+    --gv-border:#333; --gv-border2:#2d3748; --gv-border3:#374151;
+    --gv-accent:#236ca1; --gv-accent-soft:rgba(35,108,161,0.2);
+    --gv-text:#f9fafb; --gv-text2:#d1d5db; --gv-muted:#9ca3af; --gv-faint:#6b7280;
+    --gv-learned:#10b981; --gv-learn:#3b82f6; --gv-review:#f59e0b; --gv-untested:#4b5563;
+    --gv-danger:#dc2626; --gv-purple:#8b5cf6;
+    background:var(--gv-bg); color:var(--gv-text2);
+  }
+
   * { box-sizing:border-box; }
   body { margin:0; background:var(--paper); color:var(--ink);
          font:16px/1.6 var(--sans); -webkit-font-smoothing:antialiased; }
@@ -105,6 +117,18 @@
   .pmeta a { color:var(--accent); text-decoration:none; }
   .pmeta a:hover { text-decoration:underline; }
   .done { color:var(--faint); font-size:13px; margin-top:6px; }
+
+  .gv-statbar { background:#1c2b3a; border-bottom:2px solid var(--gv-accent);
+    display:flex; align-items:center; gap:16px; height:44px; padding:0 24px; }
+  .gv-pill { background:var(--gv-accent); color:#fff; font:600 11px var(--mono);
+    letter-spacing:.05em; text-transform:uppercase; padding:3px 10px; border-radius:4px; }
+  .gv-derived { color:#93c5fd; font-size:13px; }
+  .gv-counts { display:flex; gap:16px; margin-left:auto; }
+  .gv-count { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--gv-muted); }
+  .gv-dot { width:8px; height:8px; border-radius:4px; flex:none; }
+  .gv-count b { font-weight:600; }
+  .gv-recalc { background:var(--gv-accent); color:#fff; border:none; border-radius:6px;
+    padding:5px 12px; font:600 12px var(--sans); cursor:pointer; display:flex; align-items:center; gap:6px; }
 </style>
 </head>
 <body>
@@ -185,6 +209,17 @@ function stateOf(q) {
   if (!a) return "unanswered";
   if (q.mode === "graded") return a.correct ? "learned" : "learn";
   return SELF_STATE[a.self] || "review";
+}
+
+function computeStateCounts() {
+  const counts = { learned: 0, learn: 0, review: 0, untested: 0 };
+  for (const item of inventory.items || []) {
+    if (item.kind === "tool") continue;
+    const q = qByConcept[item.id];
+    const st = q ? stateOf(q) : "untested";
+    counts[st === "unanswered" ? "untested" : st]++;
+  }
+  return counts;
 }
 
 // derive the real level from placement graded, tiered answers — tier-ceiling:
@@ -332,6 +367,32 @@ function pathStep(step, n) {
   return wrap;
 }
 
+function statBar() {
+  const bar = el("div", "gv-statbar");
+  const d = derivedLevel();
+  const pill = el("span", "gv-pill", "Derived level");
+  bar.appendChild(pill);
+  bar.appendChild(el("span", "gv-derived",
+    (LEVEL_LABEL[d.level] || d.level) + " · " + d.why));
+  const counts = computeStateCounts();
+  const wrap = el("div", "gv-counts");
+  const rows = [["learned","Learned","--gv-learned"],["learn","Learn","--gv-learn"],
+    ["review","Review","--gv-review"],["untested","Untested","--gv-untested"]];
+  for (const [key, label, cssVar] of rows) {
+    const row = el("div", "gv-count");
+    const dot = el("span", "gv-dot"); dot.style.background = `var(${cssVar})`;
+    row.appendChild(dot);
+    row.appendChild(el("span", null, label + " "));
+    row.appendChild(el("b", null, String(counts[key])));
+    wrap.appendChild(row);
+  }
+  bar.appendChild(wrap);
+  const recalc = el("button", "gv-recalc", "Recalculate");
+  recalc.addEventListener("click", render);
+  bar.appendChild(recalc);
+  return bar;
+}
+
 function render() {
   const app = document.getElementById("app");
   app.innerHTML = "";
@@ -344,13 +405,11 @@ function render() {
     return;
   }
 
-  // derived-level banner
-  const d = derivedLevel();
-  const bar = el("div", "levelbar");
-  bar.appendChild(el("div", "lv", "Your level"));
-  bar.appendChild(el("div", "big", LEVEL_LABEL[d.level] || d.level));
-  bar.appendChild(el("div", "why" + (d.provisional ? " prov" : ""), d.why));
-  app.appendChild(bar);
+  // wrap post-intake view in dark theme container
+  const gvContainer = el("div", "gv");
+
+  // stat bar (replaces old levelbar)
+  gvContainer.appendChild(statBar());
 
   // split unanswered questions into placement (required) + optional
   const unanswered = questions.filter(q => !personal.answers[q.id]);
@@ -359,13 +418,13 @@ function render() {
 
   const pk = el("div", "kicker");
   pk.appendChild(el("span", "n", "01")); pk.appendChild(el("span", null, "Placement"));
-  app.appendChild(pk);
-  app.appendChild(el("h2", null, "Place your level"));
-  app.appendChild(el("p", "lead", "A few quick questions so the path is pitched right — this isn't a test, and there's no grade to chase."));
+  gvContainer.appendChild(pk);
+  gvContainer.appendChild(el("h2", null, "Place your level"));
+  gvContainer.appendChild(el("p", "lead", "A few quick questions so the path is pitched right — this isn't a test, and there's no grade to chase."));
   if (placement.length) {
-    for (const q of placement) app.appendChild(questionCard(q, false));
+    for (const q of placement) gvContainer.appendChild(questionCard(q, false));
   } else {
-    app.appendChild(el("div", "done", questions.length
+    gvContainer.appendChild(el("div", "done", questions.length
       ? "Placement done — your level above reflects your answers."
       : "No questions yet. Run /ontrack to scan the project and generate them."));
   }
@@ -374,24 +433,26 @@ function render() {
   if (optional.length) {
     const ok = el("div", "kicker");
     ok.appendChild(el("span", "n", "02")); ok.appendChild(el("span", null, "More questions"));
-    app.appendChild(ok);
-    app.appendChild(el("h2", null, "Sharpen the path (optional)"));
-    app.appendChild(el("p", "lead", "Answer any of these to pin down exactly what you know — or skip them all. They fine-tune the path; they don't gate it."));
-    for (const q of optional) app.appendChild(questionCard(q, true));
+    gvContainer.appendChild(ok);
+    gvContainer.appendChild(el("h2", null, "Sharpen the path (optional)"));
+    gvContainer.appendChild(el("p", "lead", "Answer any of these to pin down exactly what you know — or skip them all. They fine-tune the path; they don't gate it."));
+    for (const q of optional) gvContainer.appendChild(questionCard(q, true));
   }
 
   // learning path
+  const d = derivedLevel();
   const lk = el("div", "kicker");
   lk.appendChild(el("span", "n", optional.length ? "03" : "02"));
   lk.appendChild(el("span", null, "Learning path"));
-  app.appendChild(lk);
-  app.appendChild(el("h2", null, "What to go learn, in order"));
-  app.appendChild(el("p", "lead", "Pitched for " + (LEVEL_LABEL[d.level] || d.level) +
+  gvContainer.appendChild(lk);
+  gvContainer.appendChild(el("h2", null, "What to go learn, in order"));
+  gvContainer.appendChild(el("p", "lead", "Pitched for " + (LEVEL_LABEL[d.level] || d.level) +
     ". Things you got wrong always show; the rest is filtered to your level."));
 
   const steps = buildPath(d.level);
   if (!steps.length) {
-    app.appendChild(el("div", "empty", "Nothing to learn here — either you knew it, or your level filters it out."));
+    gvContainer.appendChild(el("div", "empty", "Nothing to learn here — either you knew it, or your level filters it out."));
+    app.appendChild(gvContainer);
     return;
   }
   const byDomain = {};
@@ -405,8 +466,9 @@ function render() {
     const bucket = el("div", "bucket");
     bucket.appendChild(el("div", "bh", DOMAIN_LABEL[dom] || dom));
     group.forEach((s, i) => bucket.appendChild(pathStep(s, i + 1)));
-    app.appendChild(bucket);
+    gvContainer.appendChild(bucket);
   }
+  app.appendChild(gvContainer);
 }
 
 load();
