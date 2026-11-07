@@ -24,6 +24,18 @@
     --faint:#727c74; --line:#2a2f2b; --line2:#3a403a; --accent:#43b7a2; --accent-soft:#163029;
     --tolearn:#5e9ad8; --somewhat:#d3982f; --code:#1e2320; }
 
+  /* graph-view dark chrome (always dark, independent of the light/dark toggle
+     above — see spec's Global Constraints for why) */
+  .gv {
+    --gv-bg:#1a1a1a; --gv-panel:#1e1e1e; --gv-panel2:#1e2530; --gv-well:#171717;
+    --gv-border:#333; --gv-border2:#2d3748; --gv-border3:#374151;
+    --gv-accent:#236ca1; --gv-accent-soft:rgba(35,108,161,0.2);
+    --gv-text:#f9fafb; --gv-text2:#d1d5db; --gv-muted:#9ca3af; --gv-faint:#6b7280;
+    --gv-learned:#10b981; --gv-learn:#ef4444; --gv-review:#f59e0b; --gv-untested:#4b5563;
+    --gv-danger:#dc2626; --gv-purple:#8b5cf6;
+    background:var(--gv-bg); color:var(--gv-text2);
+  }
+
   * { box-sizing:border-box; }
   body { margin:0; background:var(--paper); color:var(--ink);
          font:16px/1.6 var(--sans); -webkit-font-smoothing:antialiased; }
@@ -36,9 +48,7 @@
 
   .kicker { font-family:var(--mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase;
             color:var(--faint); margin:32px 0 4px; display:flex; align-items:center; gap:10px; }
-  .kicker .n { color:var(--accent); }
   h2 { font-family:var(--mono); font-size:19px; font-weight:600; margin:0 0 6px; letter-spacing:-.01em; }
-  .lead { color:var(--muted); font-size:13.5px; margin:0 0 14px; max-width:62ch; }
 
   /* intake */
   .intake { background:var(--raise); border:1px solid var(--line); border-radius:10px; padding:20px; margin-top:20px; }
@@ -50,14 +60,6 @@
   .levels button.on { border-color:var(--accent); background:var(--accent-soft); }
   .levels b { display:block; font-size:14.5px; }
   .levels small { color:var(--faint); font-size:12.5px; }
-
-  /* derived-level banner */
-  .levelbar { background:var(--accent-soft); border:1px solid var(--accent); border-radius:10px;
-              padding:14px 16px; margin:18px 0 8px; }
-  .levelbar .lv { font-family:var(--mono); font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); }
-  .levelbar .big { font-size:19px; font-weight:700; margin:2px 0; }
-  .levelbar .why { color:var(--muted); font-size:13px; }
-  .levelbar .prov { color:var(--faint); font-style:italic; }
 
   /* question cards */
   .qcard { background:var(--raise); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:12px; }
@@ -87,24 +89,131 @@
   .optnote button { font:inherit; font-size:13px; color:var(--accent); background:none; border:none;
                     cursor:pointer; text-decoration:underline; padding:0; }
 
-  /* learning path */
-  .bucket { margin-bottom:20px; }
-  .bh { font-family:var(--mono); font-size:12px; letter-spacing:.08em; text-transform:uppercase;
-        color:var(--accent); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
-  .bh::after { content:""; flex:1; height:1px; background:var(--line); }
-  .pstep { display:grid; grid-template-columns:auto 1fr; gap:12px; padding:9px 0; border-bottom:1px solid var(--line); align-items:baseline; }
-  .pstep:last-child { border-bottom:none; }
-  .pn { font-family:var(--mono); font-size:13px; color:var(--faint); font-weight:700; }
-  .pt { font-size:15px; font-weight:600; }
-  .tag { font-family:var(--mono); font-size:10px; border-radius:3px; padding:0 5px;
-         margin-left:8px; letter-spacing:.04em; vertical-align:1px; border:1px solid currentColor; }
-  .t-review { color:var(--somewhat); } .t-prereq { color:var(--tolearn); } .t-suggested { color:var(--faint); }
-  .pwhat { color:var(--muted); font-size:13.5px; font-weight:400; margin-top:2px; }
-  .pmeta { font-size:12.5px; margin-top:3px; display:flex; gap:10px; flex-wrap:wrap; }
-  .pmeta .where { font-family:var(--mono); color:var(--faint); }
-  .pmeta a { color:var(--accent); text-decoration:none; }
-  .pmeta a:hover { text-decoration:underline; }
-  .done { color:var(--faint); font-size:13px; margin-top:6px; }
+  /* Question cards render inside .gv (post-intake) only — pin them to the
+     dark-only palette so a light OS theme can't put a light card in the
+     dark dashboard. .gv already defines --gv-*; reuse it here instead of
+     the page's light/dark-toggle --raise/--paper/--ink/--line variables. */
+  .gv .qcard { background:var(--gv-panel); border-color:var(--gv-border2); }
+  .gv .badge { color:inherit; }
+  .gv .b-dom { color:var(--gv-accent); } .gv .b-mode { color:var(--gv-purple); }
+  .gv .b-sr { color:var(--gv-faint); } .gv .b-tier { color:var(--gv-review); }
+  .gv .qp { color:var(--gv-text); }
+  .gv .opt { border-color:var(--gv-border2); background:var(--gv-well); color:var(--gv-text2); }
+  .gv .opt:hover { border-color:var(--gv-accent); }
+  .gv .opt .r { border-color:var(--gv-border2); }
+  .gv .opt.sel { border-color:var(--gv-accent); background:var(--gv-accent-soft); }
+  .gv .opt.sel .r { border-color:var(--gv-accent); background:radial-gradient(var(--gv-accent) 0 4px, transparent 5px); }
+  .gv .note { color:var(--gv-text2); background:var(--gv-well); border-color:var(--gv-border2); }
+  .gv .qsend { background:var(--gv-accent); }
+  .gv .qskip { color:var(--gv-faint); }
+  .gv .done { color:var(--gv-faint); font-size:13px; margin-top:6px; }
+
+  .gv-statbar { background:#1c2b3a; border-bottom:2px solid var(--gv-accent);
+    display:flex; align-items:center; gap:16px; height:44px; padding:0 24px; }
+  .gv-pill { background:var(--gv-accent); color:#fff; font:600 11px var(--mono);
+    letter-spacing:.05em; text-transform:uppercase; padding:3px 10px; border-radius:4px; }
+  .gv-derived { color:#93c5fd; font-size:13px; }
+  .gv-counts { display:flex; gap:16px; margin-left:auto; }
+  .gv-count { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--gv-muted); }
+  .gv-dot { width:8px; height:8px; border-radius:4px; flex:none; }
+  .gv-count b { font-weight:600; }
+  .gv-recalc { background:var(--gv-accent); color:#fff; border:none; border-radius:6px;
+    padding:5px 12px; font:600 12px var(--sans); cursor:pointer; display:flex; align-items:center; gap:6px; }
+
+  /* post-intake: render() puts .gv-page on <body>, lifting the old
+     single-column 860px cap so the 3-panel dashboard uses the viewport width,
+     and darkening the page/header so no light margins frame the dark block */
+  body.gv-page { background:#1a1a1a; }
+  body.gv-page header { border-bottom-color:#333; }
+  body.gv-page header .wrap, body.gv-page main.wrap { max-width:none; }
+  body.gv-page main { padding:0; }
+  body.gv-page h1 { color:#f9fafb; }
+  body.gv-page .sub { color:#9ca3af; }
+
+  .gv-layout { display:grid; grid-template-columns:1fr 300px; grid-template-rows:auto auto; }
+  @media (max-width: 900px) { .gv-layout { grid-template-columns:1fr; } }
+
+  .gv-graph { position:relative; background:var(--gv-well); border-right:2px solid var(--gv-accent);
+    overflow:hidden; height:60vh; min-height:360px; }
+  .gv-graph svg { width:100%; height:100%; display:block; }
+  .gv-edge { stroke-width:1; }
+  .gv-node circle { cursor:grab; touch-action:none; }
+  .gv-node text { fill:#fff; font:700 10px var(--sans); text-anchor:middle;
+    dominant-baseline:middle; pointer-events:none; }
+  .gv-legend { position:absolute; top:16px; left:16px; background:rgba(30,30,30,0.8);
+    border:1px solid var(--gv-border); border-radius:8px; padding:10px 12px;
+    display:flex; flex-direction:column; gap:6px; font-size:11px; }
+  .gv-legend .lt { color:var(--gv-muted); font:600 10px var(--mono); letter-spacing:.05em;
+    text-transform:uppercase; }
+  .gv-legend .lr { display:flex; align-items:center; gap:8px; color:var(--gv-text2); }
+  .gv-legend .ld { width:10px; height:10px; border-radius:5px; flex:none; }
+  .gv-zoom { position:absolute; bottom:16px; right:16px; background:rgba(30,30,30,0.8);
+    border:1px solid var(--gv-border); border-radius:8px; padding:6px; display:flex;
+    flex-direction:column; gap:4px; }
+  .gv-zoom button { width:28px; height:28px; background:#242424; border:none; border-radius:6px;
+    color:var(--gv-muted); font-size:16px; cursor:pointer; }
+  .gv-detail { position:absolute; top:16px; right:16px; width:244px; background:var(--gv-panel2);
+    border:1px solid var(--gv-accent); border-radius:12px; overflow:hidden; }
+  .gv-detail .hd { background:var(--gv-accent); display:flex; align-items:center;
+    justify-content:space-between; padding:12px 14px; }
+  .gv-detail .hd .name { color:#fff; font-weight:700; font-size:13px; display:flex; align-items:center; gap:8px; }
+  .gv-detail .hd .dot { width:10px; height:10px; border-radius:5px; }
+  .gv-detail .hd .badge { background:rgba(255,255,255,0.13); color:#93c5fd; font:600 10px var(--sans);
+    padding:3px 8px; border-radius:4px; text-transform:uppercase; }
+  .gv-detail .bd { padding:14px; display:flex; flex-direction:column; gap:12px; }
+  .gv-detail .what { color:var(--gv-text2); font-size:12px; }
+  .gv-detail .files-lt { color:var(--gv-muted); font:600 10px var(--mono); letter-spacing:.05em;
+    text-transform:uppercase; }
+  .gv-detail .file-row { background:#12181f; border:1px solid var(--gv-border2); border-radius:5px;
+    padding:5px 8px; font-size:11px; color:#93c5fd; overflow:hidden; text-overflow:ellipsis;
+    white-space:nowrap; margin-top:4px; }
+  .gv-detail .yt { background:var(--gv-danger); color:#fff; border:none; border-radius:8px;
+    padding:8px 12px; font:600 12px var(--sans); cursor:pointer; width:100%; text-align:center;
+    text-decoration:none; display:block; box-sizing:border-box; }
+  .gv-empty { color:var(--gv-faint); font-size:13.5px; font-style:italic; padding:24px; }
+
+  .gv-tools { grid-column:2; grid-row:1 / span 2; background:var(--gv-bg);
+    border-left:2px solid var(--gv-accent); overflow-y:auto; }
+  @media (max-width: 900px) { .gv-tools { grid-column:1; grid-row:auto; border-left:none;
+    border-top:2px solid var(--gv-accent); } }
+  .gv-tools-hd { background:var(--gv-panel2); border-bottom:1px solid var(--gv-accent);
+    display:flex; align-items:center; gap:8px; padding:0 16px; height:48px; }
+  .gv-tools-hd .title { color:var(--gv-text); font-weight:600; font-size:14px; }
+  .gv-tools-hd .count { background:var(--gv-accent-soft); color:#60a5fa; font-size:10px;
+    padding:2px 7px; border-radius:10px; }
+  .gv-tools-filter { padding:10px 12px; border-bottom:1px solid var(--gv-border2); }
+  .gv-tools-filter input { width:100%; box-sizing:border-box; background:#242424;
+    border:1px solid var(--gv-border); border-radius:6px; padding:7px 10px; color:var(--gv-text2);
+    font-size:12px; }
+  .gv-tools-cat { color:var(--gv-faint); font:600 10px var(--mono); letter-spacing:.06em;
+    text-transform:uppercase; padding:10px 14px 4px; }
+  .gv-tool-row { display:flex; gap:10px; align-items:center; padding:10px 14px;
+    border-bottom:1px solid var(--gv-border2); }
+  .gv-tool-badge { width:36px; height:36px; border-radius:8px; flex:none; display:flex;
+    align-items:center; justify-content:center; background:var(--gv-accent-soft); color:#60a5fa;
+    font:700 10px var(--sans); }
+  .gv-tool-name { color:var(--gv-text); font-weight:600; font-size:13px; }
+  .gv-tool-where { color:var(--gv-faint); font-size:11px; overflow:hidden; text-overflow:ellipsis;
+    white-space:nowrap; }
+
+  .gv-questions { grid-column:1; background:var(--gv-bg); border-top:2px solid var(--gv-accent);
+    border-right:2px solid var(--gv-accent); display:grid; grid-template-columns:1fr 1fr; }
+  @media (max-width: 900px) { .gv-questions { grid-template-columns:1fr; border-right:none; } }
+  .gv-qcol { border-right:1px solid var(--gv-border2); display:flex; flex-direction:column; }
+  .gv-qcol:last-child { border-right:none; }
+  .gv-qcol-hd { background:var(--gv-panel); display:flex; align-items:center; gap:8px;
+    padding:10px 20px; }
+  .gv-qcol-hd .bar { width:3px; height:14px; border-radius:2px; }
+  .gv-qcol-hd .lbl { color:var(--gv-muted); font:600 12px var(--sans); letter-spacing:.03em;
+    text-transform:uppercase; }
+  .gv-qcol-hd .opt-pill { background:rgba(139,92,246,0.13); color:#a78bfa; font-size:10px;
+    padding:2px 6px; border-radius:4px; }
+  /* tall enough that a full graded card (badges + prompt + 4 options + Save/Skip)
+     fits without scrolling inside the column first */
+  .gv-qcol-body { padding:10px 16px; display:flex; flex-direction:column; gap:8px;
+    max-height:60vh; overflow-y:auto; }
+  .gv-qcol-body .qcard { margin-bottom:0; }  /* column gap already spaces cards */
+  .gv-qcol-body .done { color:var(--gv-faint); font-size:13px; margin-top:6px; }
 </style>
 </head>
 <body>
@@ -123,9 +232,6 @@ const LEVELS = [
   ["expert", "Expert", "Experienced — only surface the advanced gaps."],
 ];
 const LEVEL_LABEL = { beginner:"Beginner", intermediate:"Intermediate", expert:"Expert" };
-const DOMAIN_ORDER = ["language", "framework", "system-design", "security", "tooling", "other"];
-const DOMAIN_LABEL = { "language":"Language", "framework":"Framework",
-  "system-design":"System design", "security":"Security", "tooling":"Tooling", "other":"Other" };
 const TIER_RANK = { basic:0, intermediate:1, advanced:2 };
 const SELF_STATE = { "Confident":"learned", "Shaky":"review", "New":"learn" };
 
@@ -154,6 +260,7 @@ async function load() {
   invById = Object.fromEntries((inventory.items || []).map(i => [i.id, i]));
   qByConcept = {};
   for (const q of questions) if (!(q.concept in qByConcept)) qByConcept[q.concept] = q;
+  if (graphState) graphState.stale = true;  // rebuild nodes/edges from the fresh data
   render();
 }
 
@@ -175,6 +282,7 @@ async function submitAnswer(q, payload) {
   try {
     const res = await postJSON("/answer", Object.assign({ question_id: q.id }, payload));
     if (res && res.answers) personal.answers = res.answers;
+    if (graphState) graphState.stale = true;
     render();
   } catch (e) { alert(e.message); }
 }
@@ -185,6 +293,17 @@ function stateOf(q) {
   if (!a) return "unanswered";
   if (q.mode === "graded") return a.correct ? "learned" : "learn";
   return SELF_STATE[a.self] || "review";
+}
+
+function computeStateCounts() {
+  const counts = { learned: 0, learn: 0, review: 0, untested: 0 };
+  for (const item of inventory.items || []) {
+    if (item.kind === "tool") continue;
+    const q = qByConcept[item.id];
+    const st = q ? stateOf(q) : "untested";
+    counts[st === "unanswered" ? "untested" : st]++;
+  }
+  return counts;
 }
 
 // derive the real level from placement graded, tiered answers — tier-ceiling:
@@ -208,13 +327,6 @@ function derivedLevel() {
   if (inter.n >= MIN_TIER && inter.rate >= 0.5)
     return { level: "intermediate", why: `solid on intermediate (${inter.ok}/${inter.n}); advanced still to prove.` };
   return { level: "beginner", why: `basics are the place to start (${basic.ok}/${basic.n} so far).` };
-}
-
-// which untested concept tiers appear for a given level
-function showUntested(level, tier) {
-  if (level === "beginner") return true;
-  if (level === "intermediate") return tier !== "basic";
-  return tier === "advanced";   // expert
 }
 
 function ytLink(s) { return "https://www.youtube.com/results?search_query=" + encodeURIComponent(s); }
@@ -283,60 +395,421 @@ function questionCard(q, optional) {
   return c;
 }
 
-// Build the ordered learning path from the whole concept inventory, filtered by
-// the derived level. Answered gaps always appear; untested concepts appear by
-// level; foundational prereqs appear only for beginners.
-function buildPath(level) {
-  const steps = [];
-  for (const item of inventory.items || []) {
-    const q = qByConcept[item.id];
-    const st = q ? stateOf(q) : "untested";
-    if (st === "learned") continue;                       // knew it — drop
-    if (st === "learn" || st === "review") {              // confirmed gap — always
-      steps.push({ item, q, kind: st === "review" ? "review" : "gap" });
-      continue;
-    }
-    // untested (no question, or question unanswered)
-    if (item.kind !== "concept") continue;                // only concepts fill gaps
-    if (item.confidence === "foundational") {
-      if (level === "beginner") steps.push({ item, q: null, kind: "prereq" });
-      continue;
-    }
-    const tier = item.level || "intermediate";
-    if (showUntested(level, tier)) steps.push({ item, q: null, kind: "suggested" });
+// Deterministic pseudo-random start position, seeded by id, so repeated
+// renders before the sim settles don't jump the layout around.
+function seedXY(id, width, height) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  const rx = ((h >>> 0) % 1000) / 1000;
+  const ry = (((h >>> 8) >>> 0) % 1000) / 1000;
+  return { x: width * (0.2 + 0.6 * rx), y: height * (0.2 + 0.6 * ry) };
+}
+
+function buildGraphNodes(inv, qByC, width, height) {
+  width = width || 800; height = height || 600;
+  const nodes = [];
+  for (const item of (inv.items || [])) {
+    if (item.kind === "tool") continue;
+    const q = qByC[item.id];
+    const state = q ? stateOf(q) : "untested";
+    const { x, y } = seedXY(item.id, width, height);
+    nodes.push({
+      id: item.id, label: item.name || item.id, kind: item.kind, parent: item.parent,
+      where: item.where || [], what: item.what, search: item.search,
+      state: state === "unanswered" ? "untested" : state,
+      x, y, vx: 0, vy: 0, fixed: false,
+    });
   }
-  return steps;
+  return nodes;
 }
 
-function domainOf(step) {
-  return step.item.domain || (step.q && step.q.domain) || "other";
+// Mirrors build.py's EXT_LANG label column (extension -> display label),
+// reversed here to recover the raw extension a language item's `from`
+// provenance actually carries (build.py:312 stores the extension, not the
+// label). Keep in sync with build.py's EXT_LANG if that table changes.
+const LABEL_TO_EXT = {
+  "Python": "py", "JavaScript": "js", "JavaScript (React)": "jsx",
+  "TypeScript": "ts", "TypeScript (React)": "tsx", "Rust": "rs", "Go": "go",
+  "Java": "java", "Ruby": "rb", "PHP": "php", "C#": "cs", "C++": "cpp",
+  "C": "c", "HTML": "html", "CSS": "css", "Sass": "scss",
+};
+
+function buildGraphEdges(nodes, inv) {
+  const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
+  const bySource = {};  // "{type}::{name}" -> node.id, for items that ARE a dep/language
+  for (const item of (inv.items || [])) {
+    if (item.kind === "library") bySource[`dependency::${item.name}`] = item.id;
+    if (item.kind === "language")
+      bySource[`file_extension::${LABEL_TO_EXT[item.name] || item.name}`] = item.id;
+  }
+  const edges = [];
+  const seen = new Set();
+  const add = (source, target) => {
+    // A library/language item's own `from` points at its own provenance, so
+    // it resolves back to itself — never render that as a self-loop edge.
+    if (!source || source === target || !byId[source]) return;
+    const key = `${source}\u0000${target}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    edges.push({ source, target });
+  };
+  // Primary: build.py links a concept to its library/language via `parent`
+  // (that item's id); LLM-authored concepts leave `from` empty.
+  for (const n of nodes) add(n.parent, n.id);
+  // Secondary: `from` provenance, in case future data populates it.
+  for (const item of (inv.items || [])) {
+    if (!byId[item.id]) continue;
+    for (const prov of (item.from || [])) add(bySource[`${prov.type}::${prov.name}`], item.id);
+  }
+  return edges;
 }
 
-function pathStep(step, n) {
-  const item = step.item;
-  const wrap = el("div", "pstep");
-  wrap.appendChild(el("span", "pn", n + "."));
-  const body = el("div");
-  const t = el("div", "pt", item.name || item.id);
-  const TAG = { review:["review","t-review"], prereq:["prereq","t-prereq"], suggested:["suggested","t-suggested"] };
-  if (TAG[step.kind]) { const [txt, cls] = TAG[step.kind]; t.appendChild(el("span", "tag " + cls, txt)); }
-  body.appendChild(t);
-  if (item.what) body.appendChild(el("div", "pwhat", item.what));
-  const meta = el("div", "pmeta");
-  const where = (item.where || []).join(", ");
-  if (where) meta.appendChild(el("span", "where", where));
-  const a = el("a", null, "search ›"); a.href = ytLink(item.search || item.name || item.id);
-  a.target = "_blank"; a.rel = "noopener"; meta.appendChild(a);
-  body.appendChild(meta);
-  wrap.appendChild(body);
-  return wrap;
+// One simulation tick: repulsion between all pairs, spring attraction along
+// edges, weak center-pull, velocity damping. Mutates node x/y/vx/vy in place.
+// ponytail: O(n^2) repulsion, fine at tens of nodes; add spatial partitioning
+// if a real project's inventory ever makes this visibly slow.
+function forceStep(nodes, edges, width, height, dt) {
+  const REPEL = 6000, SPRING = 0.02, REST = 90, CENTER = 0.002, DAMP = 0.85;
+  for (const n of nodes) { if (!n.fixed) { n.fx = 0; n.fy = 0; } }
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i], b = nodes[j];
+      let dx = a.x - b.x, dy = a.y - b.y;
+      let dist2 = dx * dx + dy * dy;
+      if (dist2 < 1) dist2 = 1;
+      const force = REPEL / dist2;
+      const dist = Math.sqrt(dist2);
+      const fx = (dx / dist) * force, fy = (dy / dist) * force;
+      if (!a.fixed) { a.fx += fx; a.fy += fy; }
+      if (!b.fixed) { b.fx -= fx; b.fy -= fy; }
+    }
+  }
+  const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
+  for (const e of edges) {
+    const a = byId[e.source], b = byId[e.target];
+    if (!a || !b) continue;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const dist = Math.max(1, Math.hypot(dx, dy));
+    const stretch = dist - REST;
+    const fx = (dx / dist) * stretch * SPRING, fy = (dy / dist) * stretch * SPRING;
+    if (!a.fixed) { a.fx += fx; a.fy += fy; }
+    if (!b.fixed) { b.fx -= fx; b.fy -= fy; }
+  }
+  for (const n of nodes) {
+    if (n.fixed) continue;
+    n.fx += (width / 2 - n.x) * CENTER;
+    n.fy += (height / 2 - n.y) * CENTER;
+    n.vx = (n.vx + n.fx * dt) * DAMP;
+    n.vy = (n.vy + n.fy * dt) * DAMP;
+    n.x += n.vx; n.y += n.vy;
+  }
+}
+
+let graphState = null;  // { nodes, edges, selectedId, scale } — survives re-renders in-session
+let graphPanelGen = 0;  // bumped on every graphPanel() call; stops stale tick() loops
+                          // even when a re-render reuses the same graphState object
+                          // (e.g. a selectedId-only renderGraphOnly() after a node click)
+
+function graphPanel() {
+  const panel = el("div", "gv-graph");
+  const width = 800, height = 600;  // logical viewBox size; CSS scales the <svg> to its panel
+
+  if (!graphState || graphState.stale) {
+    const nodes = buildGraphNodes(inventory, qByConcept, width, height);
+    const edges = buildGraphEdges(nodes, inventory);
+    const selectedId = graphState ? graphState.selectedId : null;
+    const scale = graphState ? graphState.scale : 1;  // zoom survives rebuilds too
+    graphState = { nodes, edges, selectedId, scale, stale: false };
+  }
+  const gs = graphState;
+  // Every graphPanel() call — including a selectedId-only renderGraphOnly()
+  // re-render that reuses the same gs — starts its own tick() loop below.
+  // Comparing against graphState/gs identity isn't enough to stop a stale
+  // loop in that case, since gs itself doesn't change; myGen gives each call
+  // its own identity so only the most recent call's loop keeps running.
+  const myGen = ++graphPanelGen;
+
+  if (!gs.nodes.length) {
+    panel.appendChild(el("div", "gv-empty",
+      "Nothing to graph yet. Run /ontrack to scan the project first."));
+    return panel;
+  }
+
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  // zoom lives on graphState so it survives the panel rebuilds that follow
+  // every click/drag/answer; re-apply it to each freshly built <svg>.
+  const applyZoom = () => {
+    const s = gs.scale;
+    svg.setAttribute("viewBox",
+      `${width/2 - (width/2)/s} ${height/2 - (height/2)/s} ${width/s} ${height/s}`);
+  };
+  applyZoom();
+  panel.appendChild(svg);
+
+  const edgeEls = gs.edges.map(e => {
+    const line = document.createElementNS(svgNS, "line");
+    line.setAttribute("class", "gv-edge");
+    const src = gs.nodes.find(n => n.id === e.source);
+    line.setAttribute("stroke", `var(--gv-${src ? src.state : "untested"})`);
+    line.setAttribute("stroke-opacity", "0.33");
+    svg.appendChild(line);
+    return { e, line };
+  });
+
+  const RADIUS = { concept: 26, library: 34, language: 34 };
+  const nodeEls = gs.nodes.map(n => {
+    const g = document.createElementNS(svgNS, "g");
+    g.setAttribute("class", "gv-node");
+    const circle = document.createElementNS(svgNS, "circle");
+    const r = RADIUS[n.kind] || 26;
+    circle.setAttribute("r", String(r));
+    circle.setAttribute("fill", `var(--gv-${n.state})`);
+    if (n.kind === "concept") {
+      circle.setAttribute("stroke", "#4b5563"); circle.setAttribute("stroke-width", "1.5");
+    }
+    if (gs.selectedId === n.id) {
+      circle.setAttribute("stroke", "#60a5fa"); circle.setAttribute("stroke-width", "3");
+    }
+    g.appendChild(circle);
+    const text = document.createElementNS(svgNS, "text");
+    text.textContent = n.label.length > 12 ? n.label.slice(0, 11) + "…" : n.label;
+    g.appendChild(text);
+    svg.appendChild(g);
+
+    g.addEventListener("pointerdown", (ev) => {
+      n.fixed = true;
+      const move = (mv) => {
+        // getScreenCTM().inverse() converts screen (client) coordinates into
+        // the <svg>'s current user-space coordinates, correctly accounting
+        // for the viewBox's preserveAspectRatio letterboxing/scaling AND
+        // whatever viewBox the zoom controls have set — a plain
+        // getBoundingClientRect() ratio assumes the panel is exactly 4:3
+        // and ignores zoom, which is wrong in both cases.
+        const pt = svg.createSVGPoint();
+        pt.x = mv.clientX; pt.y = mv.clientY;
+        const local = pt.matrixTransform(svg.getScreenCTM().inverse());
+        n.x = local.x; n.y = local.y;
+      };
+      const up = () => {
+        n.fixed = false;
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", up);
+        window.removeEventListener("pointercancel", up);
+      };
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", up);
+      window.addEventListener("pointercancel", up);
+    });
+    g.addEventListener("click", () => {
+      gs.selectedId = n.id;
+      renderGraphOnly();
+    });
+    return { n, g, circle, text };
+  });
+
+  function tick() {
+    // dt=1: DAMP(0.85)/REPEL(6000)/SPRING(0.02) were tuned for one integration
+    // step per animation frame. Verified analytically (no real browser in this
+    // environment) via a throwaway 600-frame simulation across several seed
+    // configs: dt=1 reliably recovers from worst-case close-seed repel spikes
+    // to a stable equilibrium within ~400-450 frames without the much larger
+    // off-screen peak overshoot seen at dt=2/3. A human should still eyeball
+    // this once a real browser is available.
+    forceStep(gs.nodes, gs.edges, width, height, 1);
+    for (const { n, g } of nodeEls) g.setAttribute("transform", `translate(${n.x},${n.y})`);
+    for (const { e, line } of edgeEls) {
+      const src = gs.nodes.find(x => x.id === e.source), dst = gs.nodes.find(x => x.id === e.target);
+      if (!src || !dst) continue;
+      line.setAttribute("x1", src.x); line.setAttribute("y1", src.y);
+      line.setAttribute("x2", dst.x); line.setAttribute("y2", dst.y);
+    }
+    if (myGen === graphPanelGen) requestAnimationFrame(tick);  // stale loop stops itself after a re-render
+  }
+  requestAnimationFrame(tick);
+
+  const legend = el("div", "gv-legend");
+  legend.appendChild(el("div", "lt", "Confidence"));
+  for (const [key, label] of [["learned","Learned"],["learn","Learn"],["review","Review"],["untested","Untested"]]) {
+    const row = el("div", "lr");
+    const dot = el("span", "ld"); dot.style.background = `var(--gv-${key})`;
+    row.appendChild(dot); row.appendChild(el("span", null, label));
+    legend.appendChild(row);
+  }
+  panel.appendChild(legend);
+
+  const zoom = el("div", "gv-zoom");
+  const zin = el("button", null, "+"), zout = el("button", null, "−");
+  zin.addEventListener("click", () => { gs.scale = Math.min(3, gs.scale * 1.2); applyZoom(); });
+  zout.addEventListener("click", () => { gs.scale = Math.max(0.4, gs.scale / 1.2); applyZoom(); });
+  zoom.appendChild(zin); zoom.appendChild(zout);
+  panel.appendChild(zoom);
+
+  if (gs.selectedId) {
+    const n = gs.nodes.find(x => x.id === gs.selectedId);
+    if (n) panel.appendChild(nodeDetailCard(n));
+  }
+
+  return panel;
+}
+
+function nodeDetailCard(n) {
+  const card = el("div", "gv-detail");
+  const hd = el("div", "hd");
+  const name = el("div", "name");
+  const dot = el("span", "dot"); dot.style.background = `var(--gv-${n.state})`;
+  name.appendChild(dot); name.appendChild(el("span", null, n.label));
+  hd.appendChild(name);
+  hd.appendChild(el("span", "badge", n.state.toUpperCase()));
+  card.appendChild(hd);
+  const bd = el("div", "bd");
+  if (n.what) bd.appendChild(el("div", "what", n.what));
+  if (n.where && n.where.length) {
+    bd.appendChild(el("div", "files-lt", "Related files"));
+    for (const w of n.where) bd.appendChild(el("div", "file-row", w));
+  }
+  const yt = el("a", "yt", "Search on YouTube");
+  yt.href = ytLink(n.search || n.label); yt.target = "_blank"; yt.rel = "noopener";
+  bd.appendChild(yt);
+  card.appendChild(bd);
+  return card;
+}
+
+// Re-render just the graph panel in place, without rebuilding the whole
+// page (used after selecting a node, so Questions/Tools don't flicker).
+function renderGraphOnly() {
+  const old = document.querySelector(".gv-graph");
+  if (old && old.parentNode) old.parentNode.replaceChild(graphPanel(), old);
+}
+
+// display-only client lookup, matching ontrack/skills/ontrack/build.py's
+// CONFIG_TOOL labels by name (no server-side category field for tools).
+const TOOL_CATEGORY = {
+  Docker: "Containers", Make: "Build Tools", Procfile: "Process Config",
+  Vagrant: "Virtualization", Rake: "Build Tools", Jenkins: "CI/CD",
+};
+
+function toolsPanel() {
+  const panel = el("div", "gv-tools");
+  const tools = (inventory.items || []).filter(i => i.kind === "tool");
+
+  const hd = el("div", "gv-tools-hd");
+  hd.appendChild(el("span", "title", "Tools"));
+  hd.appendChild(el("span", "count", String(tools.length)));
+  panel.appendChild(hd);
+
+  const filterWrap = el("div", "gv-tools-filter");
+  const input = document.createElement("input");
+  input.placeholder = "Filter tools...";
+  filterWrap.appendChild(input);
+  panel.appendChild(filterWrap);
+
+  const list = el("div", null);
+  panel.appendChild(list);
+
+  function draw(filterText) {
+    list.innerHTML = "";
+    if (!tools.length) { list.appendChild(el("div", "gv-empty", "No tooling detected yet")); return; }
+    const byCat = {};
+    for (const t of tools) {
+      if (filterText && !(t.name || t.id).toLowerCase().includes(filterText)) continue;
+      const cat = TOOL_CATEGORY[t.name] || "Tools";
+      (byCat[cat] = byCat[cat] || []).push(t);
+    }
+    const cats = Object.keys(byCat).sort();
+    if (!cats.length) { list.appendChild(el("div", "gv-empty", "No tools match that filter")); return; }
+    for (const cat of cats) {
+      list.appendChild(el("div", "gv-tools-cat", cat));
+      for (const t of byCat[cat]) {
+        const row = el("div", "gv-tool-row");
+        const badge = el("div", "gv-tool-badge", (t.name || t.id).slice(0, 3));
+        row.appendChild(badge);
+        const info = el("div", null);
+        info.appendChild(el("div", "gv-tool-name", t.name || t.id));
+        info.appendChild(el("div", "gv-tool-where", (t.where || []).join(", ")));
+        row.appendChild(info);
+        list.appendChild(row);
+      }
+    }
+  }
+  draw("");
+  input.addEventListener("input", () => draw(input.value.trim().toLowerCase()));
+
+  return panel;
+}
+
+function questionsPanel() {
+  const panel = el("div", "gv-questions");
+  const unanswered = questions.filter(q => !personal.answers[q.id]);
+  const placement = unanswered.filter(q => q.placement);
+  const optional = unanswered.filter(q => !q.placement && !skipped.has(q.id));
+
+  const left = el("div", "gv-qcol");
+  const lhd = el("div", "gv-qcol-hd");
+  const lbar = el("span", "bar"); lbar.style.background = "var(--gv-accent)";
+  lhd.appendChild(lbar); lhd.appendChild(el("span", "lbl", "Place your level"));
+  left.appendChild(lhd);
+  const lbody = el("div", "gv-qcol-body");
+  if (placement.length) for (const q of placement) lbody.appendChild(questionCard(q, false));
+  else lbody.appendChild(el("div", "done", questions.length
+    ? "Placement done — your level above reflects your answers."
+    : "No questions yet. Run /ontrack to scan the project and generate them."));
+  left.appendChild(lbody);
+  panel.appendChild(left);
+
+  const right = el("div", "gv-qcol");
+  const rhd = el("div", "gv-qcol-hd");
+  const rbar = el("span", "bar"); rbar.style.background = "var(--gv-purple)";
+  rhd.appendChild(rbar); rhd.appendChild(el("span", "lbl", "Sharpen the path"));
+  rhd.appendChild(el("span", "opt-pill", "optional"));
+  right.appendChild(rhd);
+  const rbody = el("div", "gv-qcol-body");
+  if (optional.length) for (const q of optional) rbody.appendChild(questionCard(q, true));
+  else rbody.appendChild(el("div", "done", "No more questions right now."));
+  right.appendChild(rbody);
+  panel.appendChild(right);
+
+  return panel;
+}
+
+function statBar() {
+  const bar = el("div", "gv-statbar");
+  const d = derivedLevel();
+  const pill = el("span", "gv-pill", "Derived level");
+  bar.appendChild(pill);
+  bar.appendChild(el("span", "gv-derived",
+    (LEVEL_LABEL[d.level] || d.level) + " · " + d.why));
+  const counts = computeStateCounts();
+  const wrap = el("div", "gv-counts");
+  const rows = [["learned","Learned","--gv-learned"],["learn","Learn","--gv-learn"],
+    ["review","Review","--gv-review"],["untested","Untested","--gv-untested"]];
+  for (const [key, label, cssVar] of rows) {
+    const row = el("div", "gv-count");
+    const dot = el("span", "gv-dot"); dot.style.background = `var(${cssVar})`;
+    row.appendChild(dot);
+    row.appendChild(el("span", null, label + " "));
+    row.appendChild(el("b", null, String(counts[key])));
+    wrap.appendChild(row);
+  }
+  bar.appendChild(wrap);
+  const recalc = el("button", "gv-recalc", "Recalculate");
+  // full data refresh: re-fetch inventory/questions/answers (picks up a fresh
+  // /ontrack run) and rebuild the graph from it
+  recalc.addEventListener("click", () => load().catch(e => alert(e.message)));
+  bar.appendChild(recalc);
+  return bar;
 }
 
 function render() {
   const app = document.getElementById("app");
   app.innerHTML = "";
+  document.body.classList.toggle("gv-page", !!personal.level);
 
   if (!personal.level) {
+    // Stop any tick() loop left over from a graph panel we're tearing down
+    // (e.g. setLevel's POST failed and reverted to intake) — it only keeps
+    // running while its generation matches.
+    graphPanelGen++;
     const k = el("div", "kicker"); k.appendChild(el("span", null, "Start here"));
     app.appendChild(k);
     app.appendChild(el("h2", null, "Set your level"));
@@ -344,69 +817,20 @@ function render() {
     return;
   }
 
-  // derived-level banner
-  const d = derivedLevel();
-  const bar = el("div", "levelbar");
-  bar.appendChild(el("div", "lv", "Your level"));
-  bar.appendChild(el("div", "big", LEVEL_LABEL[d.level] || d.level));
-  bar.appendChild(el("div", "why" + (d.provisional ? " prov" : ""), d.why));
-  app.appendChild(bar);
+  // wrap post-intake view in dark theme container
+  const gvContainer = el("div", "gv");
 
-  // split unanswered questions into placement (required) + optional
-  const unanswered = questions.filter(q => !personal.answers[q.id]);
-  const placement = unanswered.filter(q => q.placement);
-  const optional = unanswered.filter(q => !q.placement && !skipped.has(q.id));
+  // stat bar (replaces old levelbar)
+  gvContainer.appendChild(statBar());
 
-  const pk = el("div", "kicker");
-  pk.appendChild(el("span", "n", "01")); pk.appendChild(el("span", null, "Placement"));
-  app.appendChild(pk);
-  app.appendChild(el("h2", null, "Place your level"));
-  app.appendChild(el("p", "lead", "A few quick questions so the path is pitched right — this isn't a test, and there's no grade to chase."));
-  if (placement.length) {
-    for (const q of placement) app.appendChild(questionCard(q, false));
-  } else {
-    app.appendChild(el("div", "done", questions.length
-      ? "Placement done — your level above reflects your answers."
-      : "No questions yet. Run /ontrack to scan the project and generate them."));
-  }
+  // node graph + tools + questions panels, all cells of the same grid
+  const layout = el("div", "gv-layout");
+  layout.appendChild(graphPanel());
+  layout.appendChild(toolsPanel());
+  layout.appendChild(questionsPanel());
+  gvContainer.appendChild(layout);
 
-  // optional deeper questions
-  if (optional.length) {
-    const ok = el("div", "kicker");
-    ok.appendChild(el("span", "n", "02")); ok.appendChild(el("span", null, "More questions"));
-    app.appendChild(ok);
-    app.appendChild(el("h2", null, "Sharpen the path (optional)"));
-    app.appendChild(el("p", "lead", "Answer any of these to pin down exactly what you know — or skip them all. They fine-tune the path; they don't gate it."));
-    for (const q of optional) app.appendChild(questionCard(q, true));
-  }
-
-  // learning path
-  const lk = el("div", "kicker");
-  lk.appendChild(el("span", "n", optional.length ? "03" : "02"));
-  lk.appendChild(el("span", null, "Learning path"));
-  app.appendChild(lk);
-  app.appendChild(el("h2", null, "What to go learn, in order"));
-  app.appendChild(el("p", "lead", "Pitched for " + (LEVEL_LABEL[d.level] || d.level) +
-    ". Things you got wrong always show; the rest is filtered to your level."));
-
-  const steps = buildPath(d.level);
-  if (!steps.length) {
-    app.appendChild(el("div", "empty", "Nothing to learn here — either you knew it, or your level filters it out."));
-    return;
-  }
-  const byDomain = {};
-  for (const s of steps) (byDomain[domainOf(s)] = byDomain[domainOf(s)] || []).push(s);
-  const domains = Object.keys(byDomain).sort(
-    (a, b) => DOMAIN_ORDER.indexOf(a) - DOMAIN_ORDER.indexOf(b));
-  for (const dom of domains) {
-    const group = byDomain[dom].sort((a, b) =>
-      (TIER_RANK[a.item.level] ?? 1) - (TIER_RANK[b.item.level] ?? 1) ||
-      (a.item.id < b.item.id ? -1 : 1));
-    const bucket = el("div", "bucket");
-    bucket.appendChild(el("div", "bh", DOMAIN_LABEL[dom] || dom));
-    group.forEach((s, i) => bucket.appendChild(pathStep(s, i + 1)));
-    app.appendChild(bucket);
-  }
+  app.appendChild(gvContainer);
 }
 
 load();
